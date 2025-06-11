@@ -1,0 +1,76 @@
+<div class="bg-card flex min-w-0 flex-auto flex-col dark:bg-transparent">
+    <!-- Header -->
+    <div class="flex flex-0 flex-row items-center justify-between border-b px-6 py-4 md:px-8 md:py-6">
+        <!-- Title -->
+        <div class="text-2xl font-extrabold tracking-tight sm:text-3xl">Parametro - Editar</div>
+        <div class="flex items-center">
+            <!-- More menu -->
+            <menu-button [matMenuTriggerFor]="moreMenu" />
+            <mat-menu #moreMenu="matMenu">
+                <delete-menu-button appDeleteConfirmation (confirmationClick)="delete()" />
+            </mat-menu>
+
+            <!-- Close button -->
+            <close-button [routerLink]="['../']" />
+        </div>
+    </div>
+
+    <!-- Compose form -->
+    <form class="mt-5 flex flex-col px-6 md:px-8" autocomplete="off" [formGroup]="parametroForm">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <!-- Parent -->
+            <mat-form-field class="flex items-center">
+                <mat-label>Parent</mat-label>
+                <mat-select [formControlName]="'parentId'">
+                    <mat-option>Ninguno</mat-option>
+                    @for (parent of parents(); track parent.id) {
+                        <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+            <!-- Name -->
+            <mat-form-field class="flex items-center">
+                <mat-label>Name</mat-label>
+                <input matInput [formControlName]="'name'" autocomplete="off" />
+                @if (this.form['name'].hasError('required')) {
+                    <mat-error> Campo es <strong>requerido</strong> </mat-error>
+                }
+                @if (this.form['name'].hasError('minlength')) {
+                    <mat-error> Mínimo <strong>2</strong> carácteres </mat-error>
+                }
+                @if (this.form['name'].hasError('maxlength')) {
+                    <mat-error> Máximo <strong>100</strong> carácteres </mat-error>
+                }
+            </mat-form-field>
+            <!-- Alias -->
+            <mat-form-field class="flex items-center">
+                <mat-label>Alias</mat-label>
+                <input matInput [formControlName]="'alias'" [spellcheck]="false" />
+                @if (this.form['alias'].hasError('maxlength')) {
+                    <mat-error> Máximo <strong>6</strong> carácteres </mat-error>
+                }
+            </mat-form-field>
+            <!-- Alias -->
+            <mat-form-field class="flex items-center">
+                <mat-label>Value</mat-label>
+                <input matInput [formControlName]="'value'" [spellcheck]="false" />
+                @if (this.form['value'].hasError('maxlength')) {
+                    <mat-error> Máximo <strong>12</strong> carácteres </mat-error>
+                }
+                @if (this.form['value'].hasError('pattern')) {
+                    <mat-error> Caracteres no validos </mat-error>
+                }
+            </mat-form-field>
+            <!-- Active -->
+            <div class="flex items-center">
+                <mat-slide-toggle [formControlName]="'isActive'" [color]="'primary'">
+                    {{ isActiveControl?.value === true ? 'Habilitado' : 'Deshabilitado' }}
+                </mat-slide-toggle>
+            </div>
+        </div>
+        <!-- Actions -->
+        <div class="mt-6 flex flex-row justify-between">
+            <update-button appDebounceClick [disabled]="parametroForm.invalid || saving()" (debounceClick)="save()" />
+        </div>
+    </form>
+</div>
