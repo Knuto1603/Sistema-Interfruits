@@ -2,7 +2,6 @@
 
 namespace App\apps\security\Controller;
 
-
 use App\apps\security\Service\UserRole\ChangeStateUserRoleService;
 use App\apps\security\Service\UserRole\CreateUserRoleService;
 use App\apps\security\Service\UserRole\DeleteUserRoleService;
@@ -15,19 +14,23 @@ use App\apps\security\Service\UserRole\UpdateUserRoleService;
 use App\shared\Api\AbstractSerializerApi;
 use App\shared\Api\DtoSerializer;
 use App\shared\Doctrine\UidType;
+use App\shared\Service\Dto\FilterDto;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/user_roles')]
 class UserRoleApi extends AbstractSerializerApi
 {
     #[Route('/', name: 'user_role_list', methods: ['GET'])]
-    public function list(GetUserRolesService $rolesService, UserRoleDtoTransformer $transformer): Response
+    public function list(
+        #[MapQueryString]
+        FilterDto $filterDto,
+        GetUserRolesService $rolesService
+    ): Response
     {
-        $roles = $transformer->fromObjects($rolesService->execute());
-
-        return $this->ok(['items' => $roles]);
+        return $this->ok($rolesService->execute($filterDto));
     }
 
     #[Route('/', name: 'user_role_create', methods: ['POST'])]

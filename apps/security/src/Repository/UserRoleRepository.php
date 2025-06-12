@@ -5,6 +5,8 @@ namespace App\apps\security\Repository;
 
 use App\apps\security\Entity\UserRole;
 use App\shared\Doctrine\DoctrineEntityRepository;
+use App\shared\Repository\PaginatorInterface;
+use App\shared\Service\FilterService;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -50,10 +52,12 @@ class UserRoleRepository extends DoctrineEntityRepository
     }
 
 
-    protected function paginatorFilters(QueryBuilder $queryBuilder, array $params): void
+    public function paginateAndFilter(FilterService $filterService): PaginatorInterface
     {
-        parent::paginatorFilters($queryBuilder, $params);
-        $this->filters($queryBuilder, $params);
+        $queryBuilder = $this->allQuery();
+        $filterService->apply($queryBuilder);
+
+        return $this->paginator($queryBuilder);
     }
 
     private function filters(QueryBuilder $queryBuilder, array $params): void
