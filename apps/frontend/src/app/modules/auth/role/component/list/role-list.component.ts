@@ -32,7 +32,6 @@ import {LoadingComponent} from "@shared/component/loading-screen/loading-screen.
     CommonModule,
     CrudModule,
     RouterOutlet,
-    RouterLink,
     MatDrawer,
     MatTableModule,
     MatSortModule,

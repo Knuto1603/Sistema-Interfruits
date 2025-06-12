@@ -1,4 +1,14 @@
-<div class="d-flex flex-grow-1">
+<div class="d-flex flex-grow-1 flex-column">
+  @if (showAlert()) {
+    <div class="justify-content-center">
+      <c-alert color="danger" class="d-flex align-items-center m-4 w-75">
+        <mat-icon class="icon-size-5" [svgIcon]="'personalized:alert-icon'"></mat-icon>
+        <div>{{ alert().message }}</div>
+      </c-alert>
+    </div>
+
+  }
+
     <form
         autocomplete="off"
         class="d-flex flex-grow-1 flex-column overflow-auto p-3 pt-5 p-sm-4 pt-sm-5"
@@ -44,7 +54,7 @@
                 </mat-slide-toggle>
             </div>
             <div class="mt-5 d-flex w-100 align-items-center justify-content-between">
-                <save-button (click)="save()" [disabled]="roleForm.invalid" />
+                <save-button (click)="save()" [disabled]="roleForm.invalid" [loading]="saving()" />
             </div>
         </div>
     </form>
