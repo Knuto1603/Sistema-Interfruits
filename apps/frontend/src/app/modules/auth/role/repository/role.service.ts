@@ -28,7 +28,7 @@ export class RoleService {
 
 	public getAll(
 		page: number = PAGINATION.PAGE,
-		limit: number = PAGINATION.ITEMS_PER_PAGE,
+		itemsPerPage: number = PAGINATION.ITEMS_PER_PAGE,
 		search: string = '',
 		sort: string = 'nombre',
 		order: 'asc' | 'desc' | '' = 'asc'
@@ -37,7 +37,7 @@ export class RoleService {
 			.get<RolesResponse>(`${this.urlApi}/`, {
 				params: {
 					page: page || PAGINATION.PAGE,
-					limit: limit || PAGINATION.ITEMS_PER_PAGE,
+          itemsPerPage: itemsPerPage || PAGINATION.ITEMS_PER_PAGE,
 					search: search || '',
 					sort,
 					order,
@@ -129,7 +129,7 @@ export class RoleService {
 		return this.roles$.pipe(
 			take(1),
 			switchMap((roles) =>
-				this.httpClient.delete<{ message: string }>(`${this.urlApi}/delete/${id}`).pipe(
+				this.httpClient.delete<{ message: string }>(`${this.urlApi}/${id}`).pipe(
 					map(({ message }) => {
 						const index: number = roles.findIndex((role) => role.id === id);
 						roles.splice(index, 1);
