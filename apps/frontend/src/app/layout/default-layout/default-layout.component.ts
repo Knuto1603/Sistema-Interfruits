@@ -1,10 +1,10 @@
-import { Component } from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { NgScrollbar } from 'ngx-scrollbar';
 
 import { IconDirective } from '@coreui/icons-angular';
 import {
-  ContainerComponent,
+  ContainerComponent, INavData,
   ShadowOnScrollDirective,
   SidebarBrandComponent,
   SidebarComponent,
@@ -17,6 +17,9 @@ import {
 
 import { DefaultFooterComponent, DefaultHeaderComponent } from './';
 import { navItems } from './_nav';
+import {NavigationService} from "@core/navigation/navigation.service";
+import {Observable, Subscription} from "rxjs";
+import {AsyncPipe} from "@angular/common";
 
 function isOverflown(element: HTMLElement) {
   return (
@@ -29,6 +32,7 @@ function isOverflown(element: HTMLElement) {
   selector: 'app-dashboard',
   templateUrl: './default-layout.component.html',
   styleUrls: ['./default-layout.component.scss'],
+  standalone: true,
   imports: [
     SidebarComponent,
     SidebarHeaderComponent,
@@ -44,9 +48,22 @@ function isOverflown(element: HTMLElement) {
     NgScrollbar,
     RouterOutlet,
     RouterLink,
-    ShadowOnScrollDirective
+    ShadowOnScrollDirective,
+    AsyncPipe
   ]
 })
-export class DefaultLayoutComponent {
-  public navItems = [...navItems];
+export class DefaultLayoutComponent implements OnInit {
+  public navItems$: Observable<INavData[]>;
+
+  constructor(private navigationService: NavigationService) {}
+
+  ngOnInit(): void {
+    console.log('iniciando component');
+    this.navItems$ = this.navigationService.filteredNavItems$;
+    this.navItems$.subscribe((value) => {
+      value.forEach((item) => {
+        console.log(item);
+      })
+    })
+  }
 }

@@ -8,11 +8,18 @@ export const navItems: INavData[] = [
     badge: {
       color: 'info',
       text: 'NEW'
+    },
+    attributes: {
+      roles: ['ROLE_ADMIN', 'ROLE_USER','KNUTO_ROLE'] // Todos pueden ver el dashboard
     }
+
   },
   {
     title: true,
-    name: 'Recepción'
+    name: 'Recepción',
+    attributes: {
+      roles: ['ROLE_ADMIN', 'ROLE_USER','KNUTO_ROLE'] // Todos pueden ver el dashboard
+    }
   },
   {
     name:'Configuraciones',
@@ -26,11 +33,17 @@ export const navItems: INavData[] = [
   },
   {
     title: true,
-    name: 'Trazabilidad'
+    name: 'Trazabilidad',
+    attributes: {
+      roles: ['ROLE_ADMIN', 'ROLE_TRAZABILIDAD','KNUTO_ROLE'] // Todos pueden ver el dashboard
+    }
   },
   {
     title: true,
-    name: 'Seguridad'
+    name: 'Seguridad',
+    attributes:{
+      roles: ['KNUTO_ROLE']
+    }
   },
   {
     name:'Usuarios',
@@ -49,7 +62,10 @@ export const navItems: INavData[] = [
   },
   {
     title: true,
-    name: 'Theme'
+    name: 'Theme',
+    attributes: {
+      roles: ['ROLE_ADMIN', 'ROLE_USER','KNUTO_ROLE'] // Todos pueden ver el dashboard
+    }
   },
   {
     name: 'Colors',
@@ -70,6 +86,9 @@ export const navItems: INavData[] = [
     name: 'Base',
     url: '/base',
     iconComponent: { name: 'cil-puzzle' },
+    attributes: {
+      roles: ['ROLE_USER','KNUTO_ROLE']
+    },
     children: [
       {
         name: 'Accordion',
