@@ -3,6 +3,7 @@ import { DefaultLayoutComponent, EmptyLayoutComponent  } from './layout';
 
 import { AuthGuard } from '@core/auth/guards/auth.guard';
 import { NoAuthGuard } from '@core/auth/guards/noAuth.guard';
+import {RoleCheckType, RoleConfig, RoleGuard} from "@core/auth/guards/role.guard";
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -43,11 +44,18 @@ export const routes: Routes = [
 
   {
     path: '',
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, RoleGuard],
     canActivateChild: [AuthGuard],
     component: DefaultLayoutComponent,
     data: {
-      title: 'home'
+      title: 'home',
+      data: {
+        roleConfig: {
+          roles: ['ROLE_USER', 'ROLE_ADMIN','KNUTO_ROLE'],
+          checkType: RoleCheckType.ANY,
+          redirectTo: ''
+        } as RoleConfig
+      }
     },
     children: [
       {
@@ -56,6 +64,14 @@ export const routes: Routes = [
       },
       {
         path: 'security',
+        canActivate: [RoleGuard],
+        data: {
+          roleConfig: {
+            roles: ['ROLE_ADMIN','KNUTO_ROLE'],
+            checkType: RoleCheckType.ALL,
+            redirectTo: ''
+          } as RoleConfig
+        },
         children: [
           {
             path: 'user',
