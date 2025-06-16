@@ -5,12 +5,12 @@ meta {
 }
 
 get {
-  url: {{SERVER_SECURITY_API}}/user_roles/?itemsPerPage
+  url: {{SERVER_SECURITY_API}}/user_roles/
   body: none
   auth: inherit
 }
 
 params:query {
-  itemsPerPage: 
-  : 
+  ~itemsPerPage: 
+  ~: 
 }
