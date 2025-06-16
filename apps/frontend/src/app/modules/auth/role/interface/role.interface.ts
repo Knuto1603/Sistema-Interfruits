@@ -13,6 +13,6 @@ export interface RolesResponse {
 }
 
 export interface RoleShared {
-  id?: string;
+  id: string;
   name: string;
 }
