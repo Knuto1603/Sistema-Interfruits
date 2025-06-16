@@ -100,7 +100,7 @@ export class RoleService {
 	}
 
 	public disable(id: number): Observable<string> {
-		return this.httpClient.patch<{ item: Role; message: string }>(`${this.urlApi}/disable/${id}`, {}).pipe(
+		return this.httpClient.patch<{ item: Role; message: string }>(`${this.urlApi}/${id}/disable`, {}).pipe(
 			concatMap(({ message }) => {
 				const updatedRoles: Role[] = [...this.roles.value];
 				const index: number = updatedRoles.findIndex((role) => role.id === id);
@@ -113,7 +113,7 @@ export class RoleService {
 	}
 
 	public enable(id: number): Observable<string> {
-		return this.httpClient.patch<{ item: Role; message: string }>(`${this.urlApi}/enable/${id}`, {}).pipe(
+		return this.httpClient.patch<{ item: Role; message: string }>(`${this.urlApi}/${id}/enable`, {}).pipe(
 			concatMap(({ message }) => {
 				const updatedRoles: Role[] = [...this.roles.value];
 				const index: number = updatedRoles.findIndex((role) => role.id === id);
