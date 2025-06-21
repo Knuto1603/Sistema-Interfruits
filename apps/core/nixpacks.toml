@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ['php82', 'php82Packages.composer']
+
+[phases.build]
+cmds = [
+  'composer install --no-dev --optimize-autoloader',
+  'php bin/console cache:clear --env=prod',
+  'php bin/console cache:warmup --env=prod'
+]
+
+[phases.start]
+cmd = 'php -S 0.0.0.0:$PORT -t public/'
+
+[variables]
+APP_ENV = 'prod'
