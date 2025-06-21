@@ -18,7 +18,7 @@ export const navItems: INavData[] = [
     title: true,
     name: 'Recepción',
     attributes: {
-      roles: ['ROLE_ADMIN', 'ROLE_USER','KNUTO_ROLE'] // Todos pueden ver el dashboard
+      roles: ['ROLE_ADMIN', 'ROLE_RECEPCIÓN','KNUTO_ROLE'] // Todos pueden ver el dashboard
     }
   },
   {
@@ -37,6 +37,11 @@ export const navItems: INavData[] = [
     attributes: {
       roles: ['ROLE_ADMIN', 'ROLE_TRAZABILIDAD','KNUTO_ROLE'] // Todos pueden ver el dashboard
     }
+  },
+  {
+    name:'Configuraciones',
+    url:'/sign-in',
+    iconComponent: { name: 'cil-settings' }
   },
   {
     title: true,

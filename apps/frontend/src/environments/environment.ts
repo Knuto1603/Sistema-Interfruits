@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiSecurity: 'https://127.0.0.1:8000',
-  apiCore: 'https://127.0.0.1:8001',
+  apiSecurity: 'http://192.168.1.35:8000',
+  apiCore: 'http://192.168.1.35/:8001',
 };

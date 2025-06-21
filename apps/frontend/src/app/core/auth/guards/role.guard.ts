@@ -276,7 +276,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     console.log(`🚫 RoleGuard: User not authenticated, redirecting from ${url}`);
 
     // Redirigir a login con returnUrl
-    const loginUrl = this._router.createUrlTree(['/login'], {
+    const loginUrl = this._router.createUrlTree(['/sing-in'], {
       queryParams: { returnUrl: url }
     });
 

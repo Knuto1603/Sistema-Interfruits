@@ -9,6 +9,17 @@ import { RoleSharedService } from '@modules/auth/role/repository/role-shared.ser
 import { RoleShared } from "@modules/auth/role/interface/role.interface";
 
 /**
+ * Interfaz para el cache de navegación
+ */
+interface NavigationCache {
+  items: INavData[];
+  userId: string;
+  userRoleIds: string[];
+  timestamp: number;
+  version: string; // Para versioning de la estructura de navegación
+}
+
+/**
  * Interfaz para una sección de navegación (título + elementos)
  */
 interface NavigationSection {
@@ -50,9 +61,19 @@ export class NavigationService implements OnDestroy {
   private isProcessing = false;
 
   // ========================================
+  // CACHE DE NAVEGACIÓN - NUEVA FUNCIONALIDAD
+  // ========================================
+  private readonly NAVIGATION_CACHE_KEY = 'navigation_cache';
+  private readonly CACHE_EXPIRATION_MINUTES = 30; // 30 minutos
+  private readonly NAVIGATION_VERSION = '1.0'; // Incrementar cuando cambie estructura de _nav.ts
+
+  private _navigationCache: NavigationCache | null = null;
+
+  // ========================================
   // CONSTRUCTOR - Configuración reactiva
   // ========================================
   constructor(private _authService: AuthService) {
+    this.initializeNavigationCache();
     this.setupReactiveNavigation();
   }
 
@@ -60,7 +81,6 @@ export class NavigationService implements OnDestroy {
   // LIMPIEZA DE RECURSOS
   // ========================================
   ngOnDestroy(): void {
-    console.log('🧹 NavigationService cleanup');
     this.subscriptions.unsubscribe();
   }
 
@@ -69,50 +89,135 @@ export class NavigationService implements OnDestroy {
   // ========================================
   get filteredNavItems$(): Observable<INavData[]> {
     return this._filteredNavItems.asObservable().pipe(
-      distinctUntilChanged(), // Evitar emisiones duplicadas
-      tap(items => this.logFilteredItems(items))
+      distinctUntilChanged()
     );
   }
 
   // ========================================
-  // CONFIGURACIÓN REACTIVA
+  // INICIALIZACIÓN DE CACHE
+  // ========================================
+
+  /**
+   * Inicializar cache de navegación desde localStorage
+   */
+  private initializeNavigationCache(): void {
+
+    try {
+      const cachedData = localStorage.getItem(this.NAVIGATION_CACHE_KEY);
+      if (cachedData) {
+        this._navigationCache = JSON.parse(cachedData) as NavigationCache;
+        console.log('📋 Found navigation cache for user:', this._navigationCache.userId);
+      } else {
+        console.log('📝 No navigation cache found');
+      }
+    } catch (error) {
+      console.warn('⚠️ Error reading navigation cache:', error);
+      this._navigationCache = null;
+    }
+  }
+
+  /**
+   * Verificar si el cache de navegación es válido para el usuario actual
+   */
+  private async isNavigationCacheValid(user: any): Promise<boolean> {
+    if (!this._navigationCache) {
+      return false;
+    }
+
+    // Verificar usuario
+    if (this._navigationCache.userId !== user.id) {
+
+      return false;
+    }
+
+    // Verificar versión
+    if (this._navigationCache.version !== this.NAVIGATION_VERSION) {
+      return false;
+    }
+
+    // Verificar expiración
+    const cacheAge = Date.now() - this._navigationCache.timestamp;
+    const maxAge = this.CACHE_EXPIRATION_MINUTES * 60 * 1000;
+    if (cacheAge > maxAge) {
+      return false;
+    }
+
+    // Verificar si los roles del usuario han cambiado
+    try {
+      const currentUserRoles = await this._authService.getUserRoles().pipe(take(1)).toPromise();
+      const currentRoleIds = (currentUserRoles ?? []).map(role => role.id).sort();
+      const cachedRoleIds = [...this._navigationCache.userRoleIds].sort();
+
+      const rolesChanged = JSON.stringify(currentRoleIds) !== JSON.stringify(cachedRoleIds);
+      if (rolesChanged) {
+        return false;
+      }
+
+      return true;
+
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Guardar cache de navegación
+   */
+  private async saveNavigationCache(items: INavData[], user: any): Promise<void> {
+    try {
+      const userRoles = await this._authService.getUserRoles().pipe(take(1)).toPromise();
+      const userRoleIds = (userRoles ?? []).map(role => role.id);
+
+      const cacheData: NavigationCache = {
+        items,
+        userId: user.id,
+        userRoleIds,
+        timestamp: Date.now(),
+        version: this.NAVIGATION_VERSION
+      };
+
+      this._navigationCache = cacheData;
+      localStorage.setItem(this.NAVIGATION_CACHE_KEY, JSON.stringify(cacheData));
+
+    } catch (error) {
+      console.error('❌ Error saving navigation cache:', error);
+    }
+  }
+
+  /**
+   * Limpiar cache de navegación
+   */
+  private clearNavigationCache(): void {
+    this._navigationCache = null;
+    localStorage.removeItem(this.NAVIGATION_CACHE_KEY);
+  }
+
+  // ========================================
+  // CONFIGURACIÓN REACTIVA OPTIMIZADA
   // ========================================
 
   /**
    * Configurar navegación reactiva que responde a cambios de autenticación
    */
   private setupReactiveNavigation(): void {
-    console.log('🔧 Setting up reactive navigation');
 
-    // Combinar múltiples triggers para actualización
     const navigationTriggers$ = combineLatest([
       this._authService.isAuthenticated$,
       this._authService.currentUser$
     ]).pipe(
-      debounceTime(100), // Evitar múltiples actualizaciones rápidas
+      debounceTime(100),
       distinctUntilChanged(([prevAuth, prevUser], [currAuth, currUser]) => {
-        // Solo actualizar si realmente cambió algo relevante
         const authChanged = prevAuth !== currAuth;
         const userChanged = (prevUser?.id || null) !== (currUser?.id || null);
         return !authChanged && !userChanged;
-      }),
-      tap(([isAuthenticated, user]) => {
-        console.log('🔄 Navigation trigger:', {
-          isAuthenticated,
-          userId: user?.id || 'none',
-          userName: user?.username || 'none'
-        });
       })
     );
 
-    // Suscribirse a cambios y actualizar navegación
     const subscription = navigationTriggers$.subscribe(
       ([isAuthenticated, user]) => {
         if (isAuthenticated && user) {
-          console.log('✅ User authenticated, refreshing navigation for:', user.username);
-          this.refreshNavigationForUser(user);
+          this.refreshNavigationForUserWithCache(user);
         } else {
-          console.log('❌ User not authenticated, clearing navigation');
           this.clearNavigation();
         }
       }
@@ -122,30 +227,53 @@ export class NavigationService implements OnDestroy {
   }
 
   /**
-   * Refrescar navegación para un usuario específico
+   * Refrescar navegación con verificación de cache
    */
-  private refreshNavigationForUser(user: any): void {
+  private async refreshNavigationForUserWithCache(user: any): Promise<void> {
     if (this.isProcessing) {
-      console.log('⏳ Navigation refresh already in progress, skipping');
       return;
     }
 
-    console.log('🚀 Refreshing navigation for user:', user.username);
     this.isProcessing = true;
 
-    // Limpiar cache de roles antes de procesar
-    this.clearRolesCaches();
+    try {
+      // Verificar si podemos usar cache
+      const cacheValid = await this.isNavigationCacheValid(user);
 
-    // Inicializar navegación
-    this.initializeNavigation();
+      if (cacheValid && this._navigationCache) {
+        this._filteredNavItems.next(this._navigationCache.items);
+        this.isProcessing = false;
+        return;
+      }
+
+      // Cache no válido, recalcular navegación
+
+      // NO limpiar cache de roles aquí - solo si realmente cambió el usuario
+      if (!this._navigationCache || this._navigationCache.userId !== user.id) {
+        this.clearRolesCaches();
+      }
+
+      this.initializeNavigationWithCache(user);
+
+    } catch (error) {
+      // Fallback: recalcular sin cache
+      this.clearRolesCaches();
+      this.initializeNavigationWithCache(user);
+    }
+  }
+
+  /**
+   * Refrescar navegación para un usuario específico (método original mantenido para compatibilidad)
+   */
+  private refreshNavigationForUser(user: any): void {
+    this.refreshNavigationForUserWithCache(user);
   }
 
   /**
    * Limpiar navegación cuando no hay usuario autenticado
    */
   private clearNavigation(): void {
-    console.log('🧹 Clearing navigation - no authenticated user');
-    this.clearRolesCaches();
+    this.clearNavigationCache(); // Limpiar cache también
     this._filteredNavItems.next([]);
   }
 
@@ -153,50 +281,39 @@ export class NavigationService implements OnDestroy {
    * Limpiar todos los caches relacionados con roles
    */
   private clearRolesCaches(): void {
-    console.log('🗑️ Clearing roles caches');
 
-    // Limpiar cache del RoleSharedService
     if (this.roleService.clearData) {
       this.roleService.clearData();
     }
 
-    // Limpiar cache de roles del usuario en AuthService
     if (this._authService.refreshUserRoles) {
       this._authService.refreshUserRoles().subscribe();
     }
   }
 
   // ========================================
-  // MÉTODOS PÚBLICOS
+  // MÉTODOS PÚBLICOS MEJORADOS
   // ========================================
 
   /**
    * Refrescar navegación manualmente
    */
   public refreshNavigation(): void {
-    console.log('🔄 Manual navigation refresh triggered');
 
     this._authService.currentUser$.pipe(
       filter(user => !!user),
       take(1)
     ).subscribe(user => {
-      this.refreshNavigationForUser(user);
+      this.refreshNavigationForUserWithCache(user);
     });
-  }
-
-  /**
-   * Obtener estado actual de los items
-   */
-  public getCurrentItems(): INavData[] {
-    return this._filteredNavItems.value;
   }
 
   /**
    * Forzar limpieza completa y reinicialización
    */
   public forceRefresh(): void {
-    console.log('💪 Force refresh triggered');
     this.isProcessing = false;
+    this.clearNavigationCache(); // Limpiar cache de navegación
     this.clearRolesCaches();
 
     setTimeout(() => {
@@ -204,60 +321,109 @@ export class NavigationService implements OnDestroy {
     }, 100);
   }
 
+  /**
+   * Obtener información del cache de navegación
+   */
+  public getCacheInfo(): {
+    hasCache: boolean;
+    userId: string | null;
+    itemCount: number;
+    age: number; // en minutos
+    isValid: boolean;
+  } {
+    if (!this._navigationCache) {
+      return {
+        hasCache: false,
+        userId: null,
+        itemCount: 0,
+        age: 0,
+        isValid: false
+      };
+    }
+
+    const ageMs = Date.now() - this._navigationCache.timestamp;
+    const ageMinutes = Math.round(ageMs / 60000);
+    const maxAge = this.CACHE_EXPIRATION_MINUTES * 60 * 1000;
+
+    return {
+      hasCache: true,
+      userId: this._navigationCache.userId,
+      itemCount: this._navigationCache.items.length,
+      age: ageMinutes,
+      isValid: ageMs < maxAge && this._navigationCache.version === this.NAVIGATION_VERSION
+    };
+  }
+
   // ========================================
-  // INICIALIZACIÓN (Mejorada)
+  // INICIALIZACIÓN CON CACHE
   // ========================================
 
   /**
-   * Inicializar navegación con verificación de usuario
+   * Inicializar navegación con guardado de cache
    */
-  private initializeNavigation(): void {
-    console.log('🚀 Initializing hierarchical navigation...');
+  private initializeNavigationWithCache(user: any): void {
 
-    // Verificar que hay un usuario autenticado antes de procesar
     this._authService.isAuthenticated$.pipe(
       filter(isAuth => isAuth === true),
       take(1),
       switchMap(() => {
-        console.log('👤 User confirmed authenticated, proceeding with navigation filtering');
         return this.filterNavigationWithHierarchy(navItems);
       })
     ).subscribe({
-      next: (filteredItems) => this.onNavigationFiltered(filteredItems),
+      next: (filteredItems) => this.onNavigationFilteredWithCache(filteredItems, user),
       error: (error) => this.onNavigationError(error),
       complete: () => {
         this.isProcessing = false;
-        console.log('✅ Navigation initialization completed');
       }
     });
   }
 
+  /**
+   * Manejar navegación filtrada exitosamente con guardado de cache
+   */
+  private onNavigationFilteredWithCache(filteredItems: INavData[], user: any): void {
+
+    // Emitir items
+    this._filteredNavItems.next(filteredItems);
+
+    // Guardar en cache
+    this.saveNavigationCache(filteredItems, user);
+  }
+
+  /**
+   * Inicializar navegación (método original mantenido para compatibilidad)
+   */
+  private initializeNavigation(): void {
+    this._authService.currentUser$.pipe(
+      filter(user => !!user),
+      take(1)
+    ).subscribe(user => {
+      this.initializeNavigationWithCache(user);
+    });
+  }
+
+  // ========================================
+  // RESTO DE MÉTODOS (Sin cambios)
+  // ========================================
+  // ... [Aquí van todos los métodos existentes sin cambios: filterNavigationWithHierarchy, createNavigationSections, etc.]
+
   private onNavigationFiltered(filteredItems: INavData[]): void {
-    console.log('✅ Hierarchical navigation filtered successfully:', filteredItems.length, 'items');
     this._filteredNavItems.next(filteredItems);
   }
 
   private onNavigationError(error: any): void {
-    console.error('❌ Error filtering hierarchical navigation:', error);
     this.isProcessing = false;
 
-    // En caso de error, mostrar solo items públicos
     const publicItems = navItems.filter(item => !this.itemHasRoles(item));
     this._filteredNavItems.next(publicItems);
   }
 
-  // ========================================
-  // FILTRADO JERÁRQUICO PRINCIPAL (Sin cambios)
-  // ========================================
-
   private filterNavigationWithHierarchy(items: INavData[]): Observable<INavData[]> {
-    console.log('🏗️ Starting hierarchical filtering for', items.length, 'items');
     const sections = this.createNavigationSections(items);
     return this.processSectionsHierarchically(sections);
   }
 
   private createNavigationSections(items: INavData[]): NavigationSection[] {
-    console.log('📑 Creating navigation sections...');
 
     const sections: NavigationSection[] = [];
     let currentTitleIndex = -1;
@@ -303,7 +469,6 @@ export class NavigationService implements OnDestroy {
   }
 
   private processSectionsHierarchically(sections: NavigationSection[]): Observable<INavData[]> {
-    console.log('🎯 Processing', sections.length, 'sections hierarchically');
 
     const sectionChecks = sections.map(section => this.processSingleSection(section));
 
@@ -314,7 +479,6 @@ export class NavigationService implements OnDestroy {
   }
 
   private processSingleSection(section: NavigationSection): Observable<SectionAccessResult> {
-    console.log(`📂 Processing section: "${section.title?.name || 'No Title'}" with ${section.items.length} items`);
 
     if (!section.title) {
       return this.processItemsWithoutTitle(section);
@@ -324,7 +488,6 @@ export class NavigationService implements OnDestroy {
   }
 
   private processItemsWithoutTitle(section: NavigationSection): Observable<SectionAccessResult> {
-    console.log('📄 Processing section without title');
 
     return this.filterItemsByRoles(section.items, section.startIndex + 1).pipe(
       map(filteredItems => ({
@@ -337,18 +500,14 @@ export class NavigationService implements OnDestroy {
 
   private processSectionWithTitle(section: NavigationSection): Observable<SectionAccessResult> {
     const titleName = section.title!.name;
-    console.log(`👑 Processing section with title: "${titleName}"`);
 
     return this.checkTitleAccess(section.title!).pipe(
       switchMap(titleHasAccess => {
-        console.log(`👑 Title "${titleName}" access: ${titleHasAccess}`);
 
         if (!titleHasAccess) {
-          console.log(`🚫 Section "${titleName}" blocked by title access`);
           return of({ section, titleHasAccess, itemsWithAccess: [] });
         }
 
-        console.log(`✅ Section "${titleName}" accessible, checking individual items`);
         return this.filterItemsByRoles(section.items, section.startIndex + 1).pipe(
           map(filteredItems => ({
             section,
@@ -360,23 +519,15 @@ export class NavigationService implements OnDestroy {
     );
   }
 
-  // ========================================
-  // RESTO DE MÉTODOS (Sin cambios significativos)
-  // ========================================
-
   private checkTitleAccess(title: INavData): Observable<boolean> {
     if (!this.itemHasRoles(title)) {
-      console.log(`👑 Title "${title.name}" has no roles, allowing access`);
       return of(true);
     }
 
-    console.log(`🔐 Checking roles for title: "${title.name}"`);
     const requiredRoles = this.extractItemRoles(title);
 
     return this._authService.hasRole(requiredRoles).pipe(
-      tap(hasAccess => console.log(`👑 Title "${title.name}" role check result: ${hasAccess}`)),
       catchError(error => {
-        console.error(`❌ Error checking title access for "${title.name}":`, error);
         return of(false);
       })
     );
@@ -394,7 +545,6 @@ export class NavigationService implements OnDestroy {
     return forkJoin(itemChecks).pipe(
       map(results => this.extractAccessibleItems(results)),
       catchError(error => {
-        console.error('❌ Error filtering items by roles:', error);
         return of([]);
       })
     );
@@ -402,20 +552,16 @@ export class NavigationService implements OnDestroy {
 
   private checkIndividualItemAccess(item: INavData, originalIndex: number): Observable<ItemAccessResult> {
     if (!this.itemHasRoles(item)) {
-      console.log(`📄 Item "${item.name}" has no roles, allowing access`);
       return of({ item, hasAccess: true, originalIndex });
     }
 
-    console.log(`🔐 Checking roles for item: "${item.name}"`);
     const requiredRoles = this.extractItemRoles(item);
 
     return this._authService.hasRole(requiredRoles).pipe(
       map(hasAccess => {
-        console.log(`📄 Item "${item.name}" role check result: ${hasAccess}`);
         return { item, hasAccess, originalIndex };
       }),
       catchError(error => {
-        console.error(`❌ Error checking access for item "${item.name}":`, error);
         return of({ item, hasAccess: false, originalIndex });
       })
     );
@@ -428,23 +574,19 @@ export class NavigationService implements OnDestroy {
   }
 
   private combineFilteredSections(sectionResults: SectionAccessResult[]): INavData[] {
-    console.log('🎯 Combining filtered sections...');
 
     const finalItems: INavData[] = [];
 
     for (const sectionResult of sectionResults) {
       if (!sectionResult.titleHasAccess) {
-        console.log(`🚫 Skipping section "${sectionResult.section.title?.name}" - no title access`);
         continue;
       }
 
       if (sectionResult.section.title) {
-        console.log(`👑 Adding title: "${sectionResult.section.title.name}"`);
         finalItems.push(sectionResult.section.title);
       }
 
       if (sectionResult.itemsWithAccess.length > 0) {
-        console.log(`📄 Adding ${sectionResult.itemsWithAccess.length} accessible items`);
         finalItems.push(...sectionResult.itemsWithAccess);
       }
     }
@@ -454,7 +596,6 @@ export class NavigationService implements OnDestroy {
   }
 
   private handleSectionProcessingError(error: any, sections: NavigationSection[]): Observable<INavData[]> {
-    console.error('❌ Error processing sections:', error);
     this.isProcessing = false;
 
     const fallbackItems: INavData[] = [];
@@ -473,6 +614,10 @@ export class NavigationService implements OnDestroy {
   // MÉTODOS DE UTILIDAD
   // ========================================
 
+  public getCurrentItems(): INavData[] {
+    return this._filteredNavItems.value;
+  }
+
   private isTitle(item: INavData): boolean {
     return item.title === true;
   }
@@ -487,15 +632,19 @@ export class NavigationService implements OnDestroy {
   }
 
   // ========================================
-  // LOGGING (Mejorado)
+  // LOGGING MEJORADO CON INFORMACIÓN DE CACHE
   // ========================================
 
   private logFilteredItems(items: INavData[]): void {
-    console.log('📤 Hierarchical filtered items emitted:', items.length, 'items');
 
-    // Solo mostrar detalles si hay cambios significativos
-    const currentUser = this._authService.currentUser$ ? 'authenticated' : 'none';
-    console.log(`📤 For user: ${currentUser}`);
+    const cacheInfo = this.getCacheInfo();
+    if (cacheInfo.hasCache) {
+      console.log('💾 Cache info:', {
+        age: cacheInfo.age + ' minutes',
+        valid: cacheInfo.isValid,
+        itemCount: cacheInfo.itemCount
+      });
+    }
 
     items.forEach((item, index) => {
       const type = item.title ? '👑 TITLE' : '📄 ITEM';
@@ -504,20 +653,43 @@ export class NavigationService implements OnDestroy {
   }
 
   private logCreatedSections(sections: NavigationSection[]): void {
-    console.log('📑 Created', sections.length, 'navigation sections:');
 
     sections.forEach((section, index) => {
       const titleName = section.title?.name || 'NO TITLE';
       const titleRoles = section.title?.attributes?.['roles'] || 'NO ROLES';
-      console.log(`  ${index + 1}. "${titleName}" (${titleRoles}) → ${section.items.length} items`);
     });
   }
 
   private logFinalCombination(finalItems: INavData[]): void {
-    console.log('🎯 Final hierarchical navigation structure:');
-    console.log(`📊 Total items: ${finalItems.length}`);
 
     const currentTime = new Date().toLocaleTimeString();
-    console.log(`🕐 Generated at: ${currentTime}`);
+
+    const cacheInfo = this.getCacheInfo();
+  }
+
+  // ========================================
+  // MÉTODO DE DEBUG MEJORADO
+  // ========================================
+
+  /**
+   * Debug del estado del servicio incluyendo información de cache
+   */
+  public debugState(): void {
+    const cacheInfo = this.getCacheInfo();
+    const currentItems = this.getCurrentItems();
+
+    console.log('🐛 NavigationService State Debug:');
+    console.log('  📊 Current Items:', currentItems.length);
+    console.log('  🔄 Is Processing:', this.isProcessing);
+    console.log('  💾 Cache Info:', cacheInfo);
+    console.log('  🕐 Current Time:', new Date().toLocaleTimeString());
+
+    if (cacheInfo.hasCache) {
+      console.log('  📋 Cache Details:');
+      console.log('    👤 User ID:', cacheInfo.userId);
+      console.log('    ⏰ Age:', cacheInfo.age, 'minutes');
+      console.log('    ✅ Valid:', cacheInfo.isValid);
+      console.log('    📄 Items:', cacheInfo.itemCount);
+    }
   }
 }

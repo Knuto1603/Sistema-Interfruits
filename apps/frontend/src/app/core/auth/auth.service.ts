@@ -51,6 +51,7 @@ export class AuthService {
   private httpClient: HttpClient = inject(HttpClient);
   private userService: UserService = inject(UserService);
   private rolesShared: RoleSharedService = inject(RoleSharedService);
+  private readonly LAST_USER_KEY = 'lastAuthenticatedUser';
 
   // Cache para roles del usuario
   private _userRolesCache$ = new BehaviorSubject<RoleShared[] | null>(null);
@@ -305,31 +306,52 @@ export class AuthService {
   private setAuthenticationState(response: AuthResponse): void {
     const previousUser = this._currentUser.value;
     const newUser = response.user;
+    const lastKnownUser = this.getLastKnownUser(); // ← NUEVO
 
     if (response.token) {
       this.accessToken = response.token;
     }
 
-    // Verificar si el usuario ha cambiado
-    const userChanged = !previousUser || previousUser.id !== newUser.id;
+    // ✅ LÓGICA MEJORADA:
+    const userActuallyChanged = this.hasUserActuallyChanged(previousUser, newUser, lastKnownUser);
 
-    if (userChanged) {
-      console.log('🔄 User changed:', {
-        from: previousUser?.username || 'none',
-        to: newUser.username
-      });
-
-      // Limpiar cache al cambiar usuario
+    if (userActuallyChanged) {
+      console.log('🔄 User actually changed - clearing cache');
       this.clearUserRolesCache();
       this.clearSharedRolesCache();
+    } else {
+      console.log('♻️ Same user returning - preserving cache');
     }
 
-    // Actualizar estado reactivo
     this._authenticated.next(true);
-    this._currentUser.next(newUser); // ← NUEVO: Emitir cambio de usuario
+    this._currentUser.next(newUser);
     this.userService.user = newUser;
+    this.saveLastKnownUser(newUser); // ← NUEVO
 
     console.log('✅ Authentication state set for user:', newUser.username);
+  }
+
+
+
+  private hasUserActuallyChanged(previousUser: User | null, newUser: User, lastKnownUser: User | null): boolean {
+    if (previousUser && previousUser.id !== newUser.id) return true;
+    if (!previousUser && lastKnownUser && lastKnownUser.id !== newUser.id) return true;
+    return false;
+  }
+
+  private getLastKnownUser(): User | null {
+    try {
+      const data = localStorage.getItem(this.LAST_USER_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch { return null; }
+  }
+
+  private saveLastKnownUser(user: User): void {
+    try {
+      localStorage.setItem(this.LAST_USER_KEY, JSON.stringify({
+        id: user.id, username: user.username
+      }));
+    } catch { }
   }
 
   /**

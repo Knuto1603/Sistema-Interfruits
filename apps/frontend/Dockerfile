@@ -1,27 +1,19 @@
-# Frontend Dockerfile
-FROM node:18-alpine AS build
+# Frontend - Simple & Clean
+FROM node:18-alpine as builder
 
 WORKDIR /app
 
-# Copy package files
+# Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install
 
-# Copy source code
+# Build app
 COPY . .
-
-# Build for production
 RUN npm run build
 
 # Production stage with Nginx
 FROM nginx:alpine
-
-# Copy built app to nginx
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]

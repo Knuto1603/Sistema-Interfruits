@@ -2,7 +2,20 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '@environments/environment';
 import { StorageService } from '@shared/service/storage.service';
-import { map, Observable, of, share, tap, catchError, switchMap } from 'rxjs';
+import {
+  map,
+  Observable,
+  of,
+  share,
+  tap,
+  catchError,
+  switchMap,
+  BehaviorSubject,
+  shareReplay,
+  timer,
+  EMPTY,
+  finalize
+} from 'rxjs';
 
 import { RoleShared } from '../interface/role.interface';
 
@@ -14,6 +27,16 @@ enum DataStrategy {
   API_FIRST = 'api_first',         // Primero API, cache como fallback
   CACHE_ONLY = 'cache_only',       // Solo cache
   API_ONLY = 'api_only'            // Solo API
+}
+
+/**
+ * Estado del cache en memoria
+ */
+interface CacheState {
+  data: RoleShared[];
+  timestamp: number;
+  isLoading: boolean;
+  hasError: boolean;
 }
 
 @Injectable({
@@ -30,18 +53,77 @@ export class RoleSharedService {
   private httpClient: HttpClient = inject(HttpClient);
   private storage: StorageService = inject(StorageService);
 
-  // Corregir sintaxis del signal
+  // Signal para UI reactiva
   private _roles = signal<RoleShared[]>([]);
   public roles = this._roles.asReadonly();
 
   // ========================================
-  // MÉTODOS PRINCIPALES DE OBTENCIÓN DE DATOS
+  // CACHE EN MEMORIA - SOLUCIÓN PRINCIPAL
+  // ========================================
+  private _cacheState = new BehaviorSubject<CacheState>({
+    data: [],
+    timestamp: 0,
+    isLoading: false,
+    hasError: false
+  });
+
+  // Observable compartido para evitar múltiples peticiones simultáneas
+  private _sharedDataRequest$: Observable<RoleShared[]> | null = null;
+
+  // ========================================
+  // OBSERVABLES PÚBLICOS
+  // ========================================
+  public readonly cacheState$ = this._cacheState.asObservable();
+  public readonly isLoading$ = this.cacheState$.pipe(map(state => state.isLoading));
+  public readonly hasError$ = this.cacheState$.pipe(map(state => state.hasError));
+
+  // ========================================
+  // INICIALIZACIÓN
+  // ========================================
+  constructor() {
+    this.initializeCache();
+  }
+
+  /**
+   * Inicializar cache desde localStorage
+   */
+  private initializeCache(): void {
+    console.log('🚀 Initializing RoleSharedService cache...');
+
+    try {
+      const cachedData = this.readFromStorage();
+      const timestamp = this.getCacheTimestamp();
+
+      if (cachedData.length > 0) {
+        console.log('💾 Found cached roles:', cachedData.length, 'items');
+        this.updateMemoryCache(cachedData, timestamp, false, false);
+      } else {
+        console.log('📝 No cached roles found, cache empty');
+      }
+    } catch (error) {
+      console.error('❌ Error initializing cache:', error);
+    }
+  }
+
+  // ========================================
+  // MÉTODO PRINCIPAL - OPTIMIZADO
   // ========================================
 
   /**
-   * Obtener datos con estrategia inteligente (cache-first por defecto)
+   * Obtener datos con estrategia inteligente y cache en memoria
    */
   getData(strategy: DataStrategy = DataStrategy.CACHE_FIRST): Observable<RoleShared[]> {
+    console.log(`🔍 Getting data with strategy: ${strategy}`);
+
+    // Primero verificar cache en memoria
+    const currentState = this._cacheState.value;
+
+    // Si hay una petición en curso, compartirla
+    if (currentState.isLoading && this._sharedDataRequest$) {
+      console.log('⏳ Request in progress, sharing existing request');
+      return this._sharedDataRequest$;
+    }
+
     switch (strategy) {
       case DataStrategy.CACHE_FIRST:
         return this.getDataCacheFirst();
@@ -56,18 +138,32 @@ export class RoleSharedService {
     }
   }
 
+  // ========================================
+  // ESTRATEGIAS OPTIMIZADAS
+  // ========================================
+
   /**
-   * Estrategia Cache-First: Usar cache si existe, sino API
+   * Estrategia Cache-First: Optimizada con cache en memoria
    */
   private getDataCacheFirst(): Observable<RoleShared[]> {
-    return this.getDataLocal().pipe(
-      switchMap(cachedData => {
-        if (this.isCacheValid(cachedData)) {
-          console.log('🎯 Using cached roles data');
-          return of(cachedData);
+    const currentState = this._cacheState.value;
+
+    // Si hay datos válidos en memoria, usarlos inmediatamente
+    if (this.isMemoryCacheValid(currentState)) {
+      console.log('🎯 Using valid memory cache');
+      return of(currentState.data);
+    }
+
+    // Si no hay datos en memoria, intentar localStorage
+    return this.loadFromStorageIfValid().pipe(
+      switchMap(storageData => {
+        if (storageData.length > 0) {
+          console.log('💾 Using valid storage cache');
+          this.updateMemoryCache(storageData, Date.now(), false, false);
+          return of(storageData);
         } else {
-          console.log('📡 Cache invalid/empty, fetching from API');
-          return this.getDataApiOnly();
+          console.log('📡 No valid cache, fetching from API');
+          return this.fetchFromApiWithSharing();
         }
       })
     );
@@ -77,7 +173,7 @@ export class RoleSharedService {
    * Estrategia API-First: Usar API, cache como fallback
    */
   private getDataApiFirst(): Observable<RoleShared[]> {
-    return this.getDataApiOnly().pipe(
+    return this.fetchFromApiWithSharing().pipe(
       catchError(error => {
         console.warn('⚠️ API failed, falling back to cache:', error);
         return this.getDataCacheOnly();
@@ -86,105 +182,231 @@ export class RoleSharedService {
   }
 
   /**
-   * Obtener datos solo del cache local
-   */
-  getDataLocal(): Observable<RoleShared[]> {
-    console.log('🗄️ Loading roles from cache');
-
-    const localData = this.storage.get(this.localStorageKeyShared);
-    const items = localData ? JSON.parse(localData) : [];
-
-    this.updateInternalState(items);
-    return of(items);
-  }
-
-  /**
-   * Obtener datos solo del cache (alias para claridad)
+   * Obtener datos solo del cache
    */
   private getDataCacheOnly(): Observable<RoleShared[]> {
-    return this.getDataLocal();
+    const currentState = this._cacheState.value;
+
+    // Primero intentar memoria
+    if (currentState.data.length > 0) {
+      console.log('🎯 Using memory cache for cache-only request');
+      return of(currentState.data);
+    }
+
+    // Luego intentar storage
+    return this.loadFromStorageIfValid().pipe(
+      tap(storageData => {
+        if (storageData.length > 0) {
+          console.log('💾 Loading cache-only from storage');
+          this.updateMemoryCache(storageData, Date.now(), false, false);
+        }
+      })
+    );
   }
 
   /**
    * Obtener datos solo de la API
    */
-  getDataApi(): Observable<RoleShared[]> {
-    console.log('📡 Fetching roles from API');
+  private getDataApiOnly(): Observable<RoleShared[]> {
+    return this.fetchFromApiWithSharing();
+  }
+
+  // ========================================
+  // OPTIMIZACIONES DE CACHE
+  // ========================================
+
+  /**
+   * Verificar si el cache en memoria es válido
+   */
+  private isMemoryCacheValid(state: CacheState): boolean {
+    if (state.data.length === 0 || state.hasError) {
+      return false;
+    }
+
+    const cacheAge = Date.now() - state.timestamp;
+    const maxAge = this.cacheExpirationMinutes * 60 * 1000;
+
+    const isValid = cacheAge < maxAge;
+
+    if (!isValid) {
+      console.log('⏰ Memory cache expired, age:', Math.round(cacheAge / 1000), 'seconds');
+    }
+
+    return isValid;
+  }
+
+  /**
+   * Cargar desde storage si es válido
+   */
+  private loadFromStorageIfValid(): Observable<RoleShared[]> {
+    try {
+      const cachedData = this.readFromStorage();
+      const timestamp = this.getCacheTimestamp();
+
+      if (cachedData.length > 0 && this.isStorageCacheValid(timestamp)) {
+        return of(cachedData);
+      } else {
+        console.log('💾 Storage cache invalid or empty');
+        return of([]);
+      }
+    } catch (error) {
+      console.error('❌ Error reading from storage:', error);
+      return of([]);
+    }
+  }
+
+  /**
+   * Verificar si el cache de storage es válido
+   */
+  private isStorageCacheValid(timestamp: number): boolean {
+    if (!timestamp) return false;
+
+    const cacheAge = Date.now() - timestamp;
+    const maxAge = this.cacheExpirationMinutes * 60 * 1000;
+
+    return cacheAge < maxAge;
+  }
+
+  /**
+   * Fetch con compartición de peticiones - CLAVE PARA EVITAR DUPLICADOS
+   */
+  private fetchFromApiWithSharing(): Observable<RoleShared[]> {
+    // Si ya hay una petición en curso, compartirla
+    if (this._sharedDataRequest$) {
+      console.log('🔄 Sharing existing API request');
+      return this._sharedDataRequest$;
+    }
+
+    console.log('📡 Creating new API request');
+
+    // Marcar como loading
+    this.updateLoadingState(true);
+
+    // Crear petición compartida
+    this._sharedDataRequest$ = this.performApiRequest().pipe(
+      tap(items => {
+        console.log('✅ API request successful:', items.length, 'roles');
+        this.updateMemoryCache(items, Date.now(), false, false);
+        this.saveToStorage(items);
+      }),
+      catchError(error => {
+        console.error('❌ API request failed:', error);
+        this.updateMemoryCache([], 0, false, true);
+        throw error;
+      }),
+      finalize(() => {
+        console.log('🏁 API request completed, clearing shared request');
+        this._sharedDataRequest$ = null;
+        this.updateLoadingState(false);
+      }),
+      shareReplay(1) // Compartir resultado con todos los suscriptores
+    );
+
+    return this._sharedDataRequest$;
+  }
+
+  /**
+   * Realizar petición HTTP real
+   */
+  private performApiRequest(): Observable<RoleShared[]> {
     const url = `${this.urlApi}/shared`;
 
     return this.httpClient.get<{ items: RoleShared[] }>(url).pipe(
-      map(response => this.extractItemsFromResponse(response)),
-      tap(items => this.saveToCache(items)),
-      tap(items => this.updateInternalState(items)),
-      share(),
-      catchError(error => this.handleApiError(error))
-    );
-  }
-
-  /**
-   * Obtener datos solo de la API (alias para claridad)
-   */
-  private getDataApiOnly(): Observable<RoleShared[]> {
-    return this.getDataApi();
-  }
-
-  // ========================================
-  // MÉTODOS DE VERIFICACIÓN DE EXISTENCIA (Cache-optimized)
-  // ========================================
-
-  /**
-   * Verificar si existe un rol por nombre
-   */
-  existRoleByName(name: string): Observable<boolean> {
-    return this.getData().pipe(
-      map(roles => this.checkRoleExistsByName(roles, name))
-    );
-  }
-
-  /**
-   * Verificar si existen todos los roles en un array de nombres
-   */
-  existRoleByNameArray(names: string[]): Observable<boolean> {
-    return this.getData().pipe(
-      map(roles => this.checkAllRolesExistByNames(roles, names))
-    );
-  }
-
-  /**
-   * Verificar si existe un rol por ID
-   */
-  existRoleById(id: string): Observable<boolean> {
-    return this.getData().pipe(
-      map(roles => this.checkRoleExistsById(roles, id))
+      map(response => response.items || []),
+      share()
     );
   }
 
   // ========================================
-  // MÉTODOS DE BÚSQUEDA (Cache-optimized)
+  // GESTIÓN DE ESTADO DE CACHE
   // ========================================
 
   /**
-   * Obtener rol por ID
+   * Actualizar cache en memoria
    */
-  getRoleById(id: string): Observable<RoleShared | undefined> {
-    return this.getData().pipe(
-      map(roles => this.findRoleById(roles, id))
-    );
+  private updateMemoryCache(
+    data: RoleShared[],
+    timestamp: number,
+    isLoading: boolean,
+    hasError: boolean
+  ): void {
+    this._cacheState.next({
+      data,
+      timestamp,
+      isLoading,
+      hasError
+    });
+
+    // Actualizar signal para UI reactiva
+    this._roles.set(data);
   }
 
   /**
-   * Obtener rol por nombre
+   * Actualizar solo el estado de loading
    */
-  getRoleByName(name: string): Observable<RoleShared | undefined> {
-    return this.getData().pipe(
-      map(roles => this.findRoleByName(roles, name))
-    );
+  private updateLoadingState(isLoading: boolean): void {
+    const currentState = this._cacheState.value;
+    this._cacheState.next({
+      ...currentState,
+      isLoading
+    });
+  }
+
+  // ========================================
+  // OPERACIONES DE STORAGE OPTIMIZADAS
+  // ========================================
+
+  /**
+   * Leer datos del storage
+   */
+  private readFromStorage(): RoleShared[] {
+    try {
+      const data = this.storage.get(this.localStorageKeyShared);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('❌ Error reading from storage:', error);
+      return [];
+    }
   }
 
   /**
-   * Obtener roles por array de nombres
+   * Obtener timestamp del cache
+   */
+  private getCacheTimestamp(): number {
+    try {
+      const timestamp = this.storage.get(`${this.localStorageKeyShared}_timestamp`);
+      return timestamp ? parseInt(timestamp) : 0;
+    } catch (error) {
+      console.error('❌ Error reading timestamp:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Guardar datos en storage
+   */
+  private saveToStorage(items: RoleShared[]): void {
+    try {
+      console.log('💾 Saving', items.length, 'roles to storage');
+      this.storage.set(this.localStorageKeyShared, JSON.stringify(items), this.cacheExpirationMinutes);
+      this.storage.set(`${this.localStorageKeyShared}_timestamp`, Date.now().toString());
+    } catch (error) {
+      console.error('❌ Error saving to storage:', error);
+    }
+  }
+
+  // ========================================
+  // MÉTODOS DE BÚSQUEDA OPTIMIZADOS
+  // ========================================
+
+  /**
+   * Obtener roles por array de nombres - OPTIMIZADO
    */
   getRolesByNames(names: string[]): Observable<RoleShared[]> {
+    if (!names || names.length === 0) {
+      return of([]);
+    }
+
     return this.getData().pipe(
       map(roles => this.filterRolesByNames(roles, names)),
       tap(filteredRoles => this.logRoleSearch('names', names, filteredRoles))
@@ -192,12 +414,34 @@ export class RoleSharedService {
   }
 
   /**
-   * Obtener roles por array de IDs
+   * Obtener roles por array de IDs - OPTIMIZADO
    */
   getRolesByIds(ids: string[]): Observable<RoleShared[]> {
+    if (!ids || ids.length === 0) {
+      return of([]);
+    }
+
     return this.getData().pipe(
       map(roles => this.filterRolesByIds(roles, ids)),
       tap(filteredRoles => this.logRoleSearch('IDs', ids, filteredRoles))
+    );
+  }
+
+  /**
+   * Verificar si existe un rol por nombre - OPTIMIZADO
+   */
+  existRoleByName(name: string): Observable<boolean> {
+    return this.getData().pipe(
+      map(roles => roles.some(role => role.name === name))
+    );
+  }
+
+  /**
+   * Obtener rol por nombre - OPTIMIZADO
+   */
+  getRoleByName(name: string): Observable<RoleShared | undefined> {
+    return this.getData().pipe(
+      map(roles => roles.find(role => role.name === name))
     );
   }
 
@@ -205,120 +449,14 @@ export class RoleSharedService {
   // MÉTODOS DE UTILIDAD PARA BÚSQUEDA
   // ========================================
 
-  /**
-   * Verificar si un rol existe por nombre
-   */
-  private checkRoleExistsByName(roles: RoleShared[], name: string): boolean {
-    return roles.some(role => role.name === name);
-  }
-
-  /**
-   * Verificar si todos los roles existen por nombres
-   */
-  private checkAllRolesExistByNames(roles: RoleShared[], names: string[]): boolean {
-    return names.every(name =>
-      roles.some(role => role.name === name)
-    );
-  }
-
-  /**
-   * Verificar si un rol existe por ID
-   */
-  private checkRoleExistsById(roles: RoleShared[], id: string): boolean {
-    return roles.some(role => role.id === id);
-  }
-
-  /**
-   * Encontrar rol por ID
-   */
-  private findRoleById(roles: RoleShared[], id: string): RoleShared | undefined {
-    return roles.find(role => role.id === id);
-  }
-
-  /**
-   * Encontrar rol por nombre
-   */
-  private findRoleByName(roles: RoleShared[], name: string): RoleShared | undefined {
-    return roles.find(role => role.name === name);
-  }
-
-  /**
-   * Filtrar roles por nombres
-   */
   private filterRolesByNames(roles: RoleShared[], names: string[]): RoleShared[] {
     return roles.filter(role => names.includes(role.name));
   }
 
-  /**
-   * Filtrar roles por IDs
-   */
   private filterRolesByIds(roles: RoleShared[], ids: string[]): RoleShared[] {
     return roles.filter(role => ids.includes(role.id));
   }
 
-  // ========================================
-  // MÉTODOS DE GESTIÓN DE CACHE
-  // ========================================
-
-  /**
-   * Verificar si el cache es válido
-   */
-  private isCacheValid(cachedData: RoleShared[]): boolean {
-    if (!cachedData || cachedData.length === 0) {
-      return false;
-    }
-
-    // Verificar si el cache no ha expirado
-    const cacheTimestamp = this.storage.get(`${this.localStorageKeyShared}_timestamp`);
-    if (!cacheTimestamp) {
-      return false;
-    }
-
-    const cacheAge = Date.now() - parseInt(cacheTimestamp);
-    const maxAge = this.cacheExpirationMinutes * 60 * 1000; // Convertir a milisegundos
-
-    return cacheAge < maxAge;
-  }
-
-  /**
-   * Guardar datos en cache con timestamp
-   */
-  private saveToCache(items: RoleShared[]): void {
-    console.log('💾 Saving', items.length, 'roles to cache');
-
-    this.storage.set(this.localStorageKeyShared, JSON.stringify(items), this.cacheExpirationMinutes);
-    this.storage.set(`${this.localStorageKeyShared}_timestamp`, Date.now().toString());
-  }
-
-  /**
-   * Actualizar estado interno del signal
-   */
-  private updateInternalState(items: RoleShared[]): void {
-    this._roles.set(items);
-  }
-
-  // ========================================
-  // MÉTODOS DE UTILIDAD Y PROCESAMIENTO
-  // ========================================
-
-  /**
-   * Extraer items de la respuesta de la API
-   */
-  private extractItemsFromResponse(response: { items: RoleShared[] }): RoleShared[] {
-    return response.items || [];
-  }
-
-  /**
-   * Manejar errores de la API
-   */
-  private handleApiError(error: any): Observable<RoleShared[]> {
-    console.error('❌ Error fetching roles from API:', error);
-    return this.getDataLocal(); // Fallback al cache
-  }
-
-  /**
-   * Log de búsquedas de roles
-   */
   private logRoleSearch(searchType: string, searchValues: string[], results: RoleShared[]): void {
     console.log(`🔍 Role search by ${searchType}:`, searchValues, '→ Found:', results.length, 'roles');
   }
@@ -328,34 +466,81 @@ export class RoleSharedService {
   // ========================================
 
   /**
-   * Limpiar datos del cache y estado interno
+   * Limpiar datos del cache y estado interno - MEJORADO
    */
   clearData(): void {
-    console.log('🗑️ Clearing roles data and cache');
-    this._roles.set([]);
+    console.log('🗑️ Clearing all roles data and cache');
+
+    // Limpiar memoria
+    this.updateMemoryCache([], 0, false, false);
+
+    // Limpiar storage
     this.storage.remove(this.localStorageKeyShared);
     this.storage.remove(`${this.localStorageKeyShared}_timestamp`);
+
+    // Cancelar petición en curso si existe
+    this._sharedDataRequest$ = null;
   }
 
   /**
-   * Refrescar datos forzando llamada a la API
+   * Refrescar datos forzando llamada a la API - MEJORADO
    */
   refreshData(): Observable<RoleShared[]> {
     console.log('🔄 Forcing data refresh from API');
+
+    // Cancelar petición en curso
+    this._sharedDataRequest$ = null;
+
+    // Forzar recarga desde API
     return this.getDataApiOnly();
   }
 
   /**
-   * Verificar estado del cache
+   * Verificar estado del cache - MEJORADO
    */
-  getCacheStatus(): { hasCache: boolean; isValid: boolean; itemCount: number } {
-    const cachedData = this.storage.get(this.localStorageKeyShared);
-    const items = cachedData ? JSON.parse(cachedData) : [];
+  getCacheStatus(): {
+    memoryCache: { hasData: boolean; isValid: boolean; itemCount: number; isLoading: boolean };
+    storageCache: { hasData: boolean; isValid: boolean; itemCount: number };
+  } {
+    const memoryState = this._cacheState.value;
+    const storageData = this.readFromStorage();
+    const storageTimestamp = this.getCacheTimestamp();
 
     return {
-      hasCache: !!cachedData,
-      isValid: this.isCacheValid(items),
-      itemCount: items.length
+      memoryCache: {
+        hasData: memoryState.data.length > 0,
+        isValid: this.isMemoryCacheValid(memoryState),
+        itemCount: memoryState.data.length,
+        isLoading: memoryState.isLoading
+      },
+      storageCache: {
+        hasData: storageData.length > 0,
+        isValid: this.isStorageCacheValid(storageTimestamp),
+        itemCount: storageData.length
+      }
     };
+  }
+
+  /**
+   * Precargar datos en background
+   */
+  preloadData(): void {
+    console.log('⚡ Preloading roles data in background');
+    this.getData().subscribe({
+      next: (roles) => console.log('⚡ Preload completed:', roles.length, 'roles'),
+      error: (error) => console.error('⚡ Preload failed:', error)
+    });
+  }
+
+  /**
+   * Debug del estado actual
+   */
+  debugState(): void {
+    const status = this.getCacheStatus();
+    console.log('🐛 RoleSharedService State Debug:');
+    console.log('  🧠 Memory Cache:', status.memoryCache);
+    console.log('  💾 Storage Cache:', status.storageCache);
+    console.log('  📡 Active Request:', !!this._sharedDataRequest$);
+    console.log('  🔄 Current Signal Value:', this._roles().length, 'roles');
   }
 }

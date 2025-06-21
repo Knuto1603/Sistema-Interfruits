@@ -81,7 +81,7 @@ export class UserListComponent implements OnInit, AfterViewInit {
       )
       .subscribe();
 
-    this.rolesShared.getDataLocal().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    this.rolesShared.getData().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 		this.parametroShared.getDataLocal().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 
 		// Subscribe to media query change
