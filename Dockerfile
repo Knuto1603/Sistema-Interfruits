@@ -1,44 +1,43 @@
-# Dockerfile para Symfony en Render.com
-FROM php:8.2-apache
+# Dockerfile final para Railway - Symfony (core + security) + Angular + Nginx
 
-# Instalar extensiones necesarias
+FROM php:8.2-cli
+
+# Variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV APP_ENV=prod
+ENV SYMFONY_ALLOW_APP_DEV=true
+
+# Instalación de dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    libzip-dev \
-    libpq-dev \
-    && docker-php-ext-install \
-    zip \
-    pdo \
-    pdo_pgsql \
-    pgsql
+    git zip unzip curl libpq-dev libzip-dev \
+    nodejs npm nginx \
+    && docker-php-ext-install pdo pdo_mysql zip
 
 # Instalar Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Configurar Apache
-RUN a2enmod rewrite
+# Instalar Symfony CLI
+RUN curl -sS https://get.symfony.com/cli/installer | bash && \
+    mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
 
-# Configurar DocumentRoot
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+# Instalar http-server para Angular
+RUN npm install -g http-server
 
-# Copiar código
-WORKDIR /var/www/html
-COPY . .
+# Crear carpeta de certificados vacíos para nginx si deseas configurar HTTPS (Railway ya lo maneja por fuera)
+RUN mkdir -p /etc/nginx/certs
 
-# Instalar dependencias
-RUN composer install --no-dev --optimize-autoloader
+# Copiar todo el proyecto
+WORKDIR /app
+COPY . /app
 
-# Configurar permisos
-RUN chown -R www-data:www-data var/
-RUN chmod -R 775 var/
+# Copiar configuración de nginx
+COPY default.conf /etc/nginx/conf.d/default.conf
 
-# Limpiar cache
-RUN php bin/console cache:clear --env=prod --no-debug
+# Dar permisos de ejecución al script
+RUN chmod +x ./start.sh
 
-# Exponer puerto
-EXPOSE 80
+# Exponer el puerto por el que Railway enruta (8080)
+EXPOSE 8080
 
-CMD ["apache2-foreground"]
+# Iniciar el script que arranca core, security y nginx
+CMD ["./start.sh"]
