@@ -1,13 +1,19 @@
+#!/bin/bash
+
 # Iniciar backend apps/core en el puerto 8000
-symfony server:start --no-tls --port=8000 --dir=apps/core &
+cd /app/apps/core
+symfony server:start --no-tls --port=8000 &
+cd /app
 
 # Iniciar backend apps/security en el puerto 8001
-symfony server:start --no-tls --port=8001 --dir=apps/security &
+cd /app/apps/security
+symfony server:start --no-tls --port=8001 &
+cd /app
 
 # Construir Angular
-cd apps/frontend
+cd /app/apps/frontend
 npm install && npm run build
-cd ../../
+cd /app
 
-# Iniciar nginx para enrutar todo a /api/core, /api/security, y servir Angular
+# Iniciar nginx
 nginx -g 'daemon off;'
