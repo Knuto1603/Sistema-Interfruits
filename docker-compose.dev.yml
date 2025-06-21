@@ -1,0 +1,105 @@
+# Docker compose para desarrollo
+version: '3.8'
+
+services:
+  # Frontend Angular (desarrollo con hot reload)
+  frontend-dev:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile.dev
+    container_name: trazabilidad-frontend-dev
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - trazabilidad-network
+    command: npm run start:network
+
+  # Security API (desarrollo)
+  security-api-dev:
+    image: php:8.2-cli-alpine
+    container_name: trazabilidad-security-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/security:/var/www/html
+    working_dir: /var/www/html
+    environment:
+      - APP_ENV=dev
+      - DATABASE_URL=mysql://root:trazabilidad123@mysql:3306/sistema_trazabilidad
+      - CORS_ALLOW_ORIGIN=http://localhost:4200
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - trazabilidad-network
+    command: php -S 0.0.0.0:8000 -t public/
+
+  # Core API (desarrollo)
+  core-api-dev:
+    image: php:8.2-cli-alpine
+    container_name: trazabilidad-core-dev
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./apps/core:/var/www/html
+    working_dir: /var/www/html
+    environment:
+      - APP_ENV=dev
+      - DATABASE_URL=mysql://root:trazabilidad123@mysql:3306/sistema_trazabilidad
+      - CORS_ALLOW_ORIGIN=http://localhost:4200
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - trazabilidad-network
+    command: php -S 0.0.0.0:8001 -t public/
+
+  # MySQL Database (mismo que producción)
+  mysql:
+    image: mysql:8.0
+    container_name: trazabilidad-mysql-dev
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: trazabilidad123
+      MYSQL_DATABASE: sistema_trazabilidad
+      MYSQL_USER: trazabilidad
+      MYSQL_PASSWORD: trazabilidad123
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    networks:
+      - trazabilidad-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptrazabilidad123"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+      start_period: 40s
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: trazabilidad-phpmyadmin-dev
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: trazabilidad123
+    depends_on:
+      - mysql
+    networks:
+      - trazabilidad-network
+
+networks:
+  trazabilidad-network:
+    driver: bridge
+
+volumes:
+  mysql_dev_data:
+    driver: local

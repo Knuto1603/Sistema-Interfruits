@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Frontend Angular + Nginx
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: trazabilidad-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - security-api
+      - core-api
+    networks:
+      - trazabilidad-network
+    restart: unless-stopped
+
+  # Security API (Symfony)
+  security-api:
+    build:
+      context: ./apps/security
+      dockerfile: Dockerfile
+    container_name: trazabilidad-security
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=mysql://root:trazabilidad123@mysql:3306/sistema_trazabilidad
+      - CORS_ALLOW_ORIGIN=http://localhost:4200
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - trazabilidad-network
+    restart: unless-stopped
+
+  # Core API (Symfony)
+  core-api:
+    build:
+      context: ./apps/core
+      dockerfile: Dockerfile
+    container_name: trazabilidad-core
+    ports:
+      - "8001:8001"
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=mysql://root:trazabilidad123@mysql:3306/sistema_trazabilidad
+      - CORS_ALLOW_ORIGIN=http://localhost:4200
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - trazabilidad-network
+    restart: unless-stopped
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: trazabilidad-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: trazabilidad123
+      MYSQL_DATABASE: sistema_trazabilidad
+      MYSQL_USER: trazabilidad
+      MYSQL_PASSWORD: trazabilidad123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - trazabilidad-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptrazabilidad123"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+      start_period: 40s
+    restart: unless-stopped
+
+  # phpMyAdmin (opcional, para administrar BD)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: trazabilidad-phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: trazabilidad123
+    depends_on:
+      - mysql
+    networks:
+      - trazabilidad-network
+    restart: unless-stopped
+
+networks:
+  trazabilidad-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

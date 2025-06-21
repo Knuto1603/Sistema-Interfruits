@@ -13,7 +13,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve -o",
-    "build": "ng build",
+    "start:network": "ng serve --host 0.0.0.0 --port 4200",
+    "build": "ng build --configuration production",
+    "build:railway": "ng build --configuration production --output-path dist",
+    "start:railway": "ng serve --host 0.0.0.0 --port $PORT --disable-host-check",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

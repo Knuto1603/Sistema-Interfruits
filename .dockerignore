@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+README.md
+
+# Node modules
+node_modules
+npm-debug.log
+
+# Logs
+*.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist
+build
+
+# Environment files (mantener solo .env base)
+.env.local
+.env.prod
+.env.dev
+
+# Testing
+coverage
+.nyc_output
+
+# Cache
+.cache
+.tmp
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
