@@ -26,6 +26,8 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "ext-pgsql": "*",
         "carloschininin/attach-file-bundle": "dev-main",
         "carloschininin/php-spreadsheet": "dev-main",
         "doctrine/dbal": "^3.9.4",
