@@ -1,43 +1,129 @@
-# Git
+# ===================================
+# .dockerignore optimizado para Railway
+# Evita copiar archivos innecesarios
+# ===================================
+
+# Git y control de versiones
 .git
 .gitignore
-README.md
+.gitattributes
+*.md
+CHANGELOG*
+LICENSE*
 
-# Node modules
-node_modules
-npm-debug.log
+# Scripts de desarrollo (no necesarios en producción)
+dev.sh
+deploy.sh
+setup-permissions.sh
+docker-compose.yml
+docker-compose.*.yml
+
+# Archivos de configuración de desarrollo
+.env.local
+.env.dev
+.env.test
+.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.pnp.*
 
 # Logs
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Build artifacts
-dist
-build
-
-# Environment files (mantener solo .env base)
-.env.local
-.env.prod
-.env.dev
-
-# Testing
-coverage
+# Coverage directory used by tools like istanbul
+coverage/
 .nyc_output
 
-# Cache
-.cache
-.tmp
+# IDE y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
 
-# Docker
-Dockerfile*
-docker-compose*
-.dockerignore
+# OS específicos
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts (se generan durante el build)
+dist/
+build/
+apps/frontend/dist/
+apps/frontend/build/
+
+# Cache
+.cache/
+.tmp/
+.temp/
+*.tmp
+
+# Symfony cache y logs (se generan automáticamente)
+var/cache/
+var/log/
+var/sessions/
+apps/core/var/cache/
+apps/core/var/log/
+apps/security/var/cache/
+apps/security/var/log/
+
+# Composer vendor (se instala durante el build)
+vendor/
+
+# PHPUnit
+.phpunit.result.cache
+
+# Testing
+tests/
+phpunit.xml
+phpunit.xml.dist
+
+# Documentación de desarrollo
+docs/
+documentation/
+
+# Archivos de backup
+*.bak
+*.backup
+*.old
+
+# Archivos temporales de herramientas
+.phpcs-cache
+.php_cs.cache
+
+# Archivos específicos del proyecto que no van a producción
+exports/
+HTTP/
+AppServ/
+*.rar
+*.zip
+
+# Mantener solo lo necesario para production
+!config/
+!src/
+!apps/
+!public/
+!docker/
