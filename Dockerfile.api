@@ -1,6 +1,7 @@
 # ===================================
-# Dockerfile para Backend API (Symfony)
+# Dockerfile para Backend API (Symfony) - Railway Compatible
 # Contiene: apps/core + apps/security
+# Usa PORT dinámico de Railway
 # ===================================
 
 FROM php:8.2-fpm-alpine
@@ -9,7 +10,7 @@ FROM php:8.2-fpm-alpine
 ENV APP_ENV=prod
 ENV SYMFONY_PHPUNIT_VERSION=9.5
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema (incluyendo gettext para envsubst y openssl para JWT)
 RUN apk add --no-cache \
     git \
     unzip \
@@ -19,6 +20,8 @@ RUN apk add --no-cache \
     mysql-client \
     nginx \
     supervisor \
+    gettext \
+    openssl \
     && docker-php-ext-install \
     pdo \
     pdo_mysql \
@@ -50,8 +53,10 @@ RUN mkdir -p var/cache var/log \
     && mkdir -p apps/security/var/cache apps/security/var/log \
     && chown -R symfony:symfony var apps/core/var apps/security/var
 
-# Configurar Nginx para servir ambas apps
-COPY docker/nginx.api.conf /etc/nginx/nginx.conf
+# Copiar plantilla de configuración Nginx y script JWT
+COPY docker/nginx.api.conf.template /app/docker/nginx.api.conf.template
+COPY docker/generate-jwt-keys.sh /app/docker/generate-jwt-keys.sh
+RUN chmod +x /app/docker/generate-jwt-keys.sh
 
 # Configurar Supervisor para manejar PHP-FPM + Nginx
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -61,6 +66,7 @@ COPY docker/entrypoint.api.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # El puerto que Railway asignará automáticamente
+EXPOSE $PORT
 EXPOSE 8080
 
 USER symfony
