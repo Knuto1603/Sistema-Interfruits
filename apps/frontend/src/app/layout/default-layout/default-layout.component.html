@@ -14,6 +14,7 @@
   </c-sidebar-header>
 
   <ng-scrollbar pointerEventsMethod="scrollbar" visibility="hover">
+    <app-loading *ngIf="isLoading()" message="Cargando..."></app-loading>
     <c-sidebar-nav
       [navItems]="(navItems$ | async) || []"
       dropdownMode="close"

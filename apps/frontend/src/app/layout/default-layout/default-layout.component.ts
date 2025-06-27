@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, OnInit, signal} from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { NgScrollbar } from 'ngx-scrollbar';
 
@@ -18,8 +18,9 @@ import {
 import { DefaultFooterComponent, DefaultHeaderComponent } from './';
 import { navItems } from './_nav';
 import {NavigationService} from "@core/navigation/navigation.service";
-import {Observable, Subscription} from "rxjs";
-import {AsyncPipe} from "@angular/common";
+import {finalize, Observable, take, filter, Subscription} from "rxjs";
+import {AsyncPipe, NgIf} from "@angular/common";
+import {LoadingComponent} from "@shared/component/loading-screen/loading-screen.component";
 
 function isOverflown(element: HTMLElement) {
   return (
@@ -49,21 +50,27 @@ function isOverflown(element: HTMLElement) {
     RouterOutlet,
     RouterLink,
     ShadowOnScrollDirective,
-    AsyncPipe
+    AsyncPipe,
+    LoadingComponent,
+    NgIf
   ]
 })
 export class DefaultLayoutComponent implements OnInit {
   public navItems$: Observable<INavData[]>;
+  public isLoading = signal<boolean>(false);
 
   constructor(private navigationService: NavigationService) {}
 
   ngOnInit(): void {
+    this.isLoading.set(true)
+
     console.log('iniciando component');
     this.navItems$ = this.navigationService.filteredNavItems$;
-    this.navItems$.subscribe((value) => {
-      value.forEach((item) => {
-        console.log(item);
-      })
-    })
+
+    this.navItems$.pipe(
+      filter(items => items.length > 0),
+      take(1),
+      finalize(() => this.isLoading.set(false))
+    ).subscribe();
   }
 }
