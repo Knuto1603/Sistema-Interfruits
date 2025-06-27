@@ -2,7 +2,7 @@
 
 namespace App\shared\Validator;
 
-use App\Shared\Doctrine\UidType;
+use App\shared\Doctrine\UidType;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
