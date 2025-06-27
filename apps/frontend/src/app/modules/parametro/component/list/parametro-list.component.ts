@@ -28,23 +28,25 @@ import { DeleteConfirmationDirective } from '@shared/directive/delete-confirmati
 import { finalize, merge, switchMap, tap } from 'rxjs';
 
 import { ParametroRepositoryService } from '../../repository/parametro-repository.service';
+import {LoadingComponent} from "@shared/component/loading-screen/loading-screen.component";
 
 @Component({
 	selector: 'app-parametro-list',
-	imports: [
-		CommonModule,
-		AddButtonComponent,
-		EditButtonComponent,
-		ExportButtonComponent,
-		MatPaginatorModule,
-		MatSortModule,
-		MatTableModule,
-		SearchInputComponent,
-		RouterLink,
-		DeleteButtonComponent,
-		DeleteConfirmationDirective,
-		ActiveButtonComponent,
-	],
+  imports: [
+    CommonModule,
+    AddButtonComponent,
+    EditButtonComponent,
+    ExportButtonComponent,
+    MatPaginatorModule,
+    MatSortModule,
+    MatTableModule,
+    SearchInputComponent,
+    RouterLink,
+    DeleteButtonComponent,
+    DeleteConfirmationDirective,
+    ActiveButtonComponent,
+    LoadingComponent,
+  ],
 	templateUrl: './parametro-list.component.html',
 	styles: [],
 	changeDetection: ChangeDetectionStrategy.OnPush,

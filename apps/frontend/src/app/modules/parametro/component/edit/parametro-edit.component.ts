@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, OnInit, signal} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, UntypedFormGroup, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -52,30 +52,68 @@ export class ParametroEditComponent implements OnInit {
 	private router: Router = inject(Router);
 	private destroyRef: DestroyRef = inject(DestroyRef);
 
-	readonly id = input.required<string>();
-	readonly parametro = input.required<Parametro>();
+	readonly id = signal<string>('');
+	readonly parametro = signal<Parametro|null>(null);
 	readonly parents = signal<ParametroParentResponse[]>([]);
 	readonly saving = signal(false);
 
-	public parametroForm: UntypedFormGroup;
+
+  // Inicializar formulario con valores predeterminados
+  public parametroForm: UntypedFormGroup = this.formBuilder.group({
+    id: [null],
+    parent: [null],
+    name: [null, [Validators.required, Validators.minLength(2)]],
+    alias: [null, [Validators.required, Validators.minLength(4)]],
+    value: [null],
+    isActive: [true],
+  });
+
+  constructor() {
+    // Obtener datos del resolver y actualizar el formulario cuando estén disponibles
+    effect(() => {
+      if (this.parametro()) {
+        const parametro = this.parametro();
+        this.parametroForm.patchValue({
+          id: parametro?.id,
+          parent: parametro?.parentName,
+          name: parametro?.name,
+          alias: parametro?.alias,
+          value: parametro?.value,
+          isActive: parametro?.isActive,
+        });
+        console.log('Datos del usuario cargados en el formulario:', parametro);
+      }
+    });
+  }
 
 	ngOnInit(): void {
-		this.parametroForm = this.formBuilder.group({
-			id: [this.parametro().id],
-			parentId: [this.parametro().parentId],
-			name: [this.parametro().name, [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-			alias: [this.parametro().alias, [Validators.maxLength(6)]],
-			value: [this.parametro().value, [Validators.maxLength(12), Validators.pattern('^-?(0|[1-9]\\d*)(\\.\\d+)?$')]],
-			isActive: [this.parametro().isActive],
-		});
 
-		this.parametroRepository
-			.getParents()
-			.pipe(takeUntilDestroyed(this.destroyRef))
-			.subscribe((parents) => {
-				const items = parents.filter((parent) => parent.id !== this.id());
-				this.parents.set(items);
-			});
+    this.parametroRepository
+      .getParents()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((parents) => {
+        const items = parents.filter((parent) => parent.id !== this.id());
+        this.parents.set(items);
+      });
+
+
+    const routeData = this.activatedRoute.snapshot.data;
+    if (routeData['parametro']) {
+      this.parametro.set(routeData['parametro']);
+    }
+
+    const id = this.activatedRoute.snapshot.paramMap.get('id');
+    if (id) {
+      this.id.set(id);
+    }
+
+    this.activatedRoute.data.subscribe((data) => {
+      // Desactivar la pantalla de carga
+      //this.userComponent.isLoading.set(false);
+
+    });
+
+
 	}
 
 	public get form() {
