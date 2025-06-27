@@ -27,7 +27,6 @@ export interface RoleConfig {
   roles: string[];                          // Roles requeridos
   checkType?: RoleCheckType;               // Tipo de verificación (ANY/ALL)
   redirectTo?: string;                     // Ruta de redirección personalizada
-  requireAuth?: boolean;                   // Requiere autenticación (default: true)
   errorMessage?: string;                   // Mensaje de error personalizado
   allowIfNoRoles?: boolean;               // Permitir acceso si no hay roles definidos
 }
@@ -81,14 +80,14 @@ export class RoleGuard implements CanActivate, CanActivateChild {
   // ========================================
 
   /**
-   * Verificar acceso a la ruta
+   * Verificar acceso a la ruta basado en roles
    */
   private checkAccess(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean | UrlTree> {
 
-    console.log(`🛡️ RoleGuard: Checking access to route: ${state.url}`);
+    console.log(`🛡️ RoleGuard: Checking role access to route: ${state.url}`);
 
     // Parsear configuración de roles de la ruta
     const roleConfig = this.parseRoleConfig(route);
@@ -96,23 +95,10 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     // Log de configuración
     this.logRouteConfig(state.url, roleConfig);
 
-    // Verificar autenticación si es requerida
-    if (roleConfig.requireAuth) {
-      return this.checkAuthentication().pipe(
-        switchMap(isAuthenticated => {
-          if (!isAuthenticated) {
-            return this.handleUnauthenticated(state.url);
-          }
-          return this.checkRoles(roleConfig, state.url);
-        }),
-        catchError(error => this.handleError(error, state.url))
-      );
-    } else {
-      // Si no requiere autenticación, solo verificar roles
-      return this.checkRoles(roleConfig, state.url).pipe(
-        catchError(error => this.handleError(error, state.url))
-      );
-    }
+    // Verificar roles directamente
+    return this.checkRoles(roleConfig, state.url).pipe(
+      catchError(error => this.handleError(error, state.url))
+    );
   }
 
   // ========================================
@@ -130,7 +116,6 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       const config = routeData['roleConfig'] as RoleConfig;
       return {
         checkType: RoleCheckType.ANY,
-        requireAuth: true,
         allowIfNoRoles: false,
         ...config
       };
@@ -141,7 +126,6 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       return {
         roles: routeData['roles'] as string[],
         checkType: RoleCheckType.ANY,
-        requireAuth: true,
         allowIfNoRoles: false
       };
     }
@@ -150,26 +134,13 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     return {
       roles: [],
       checkType: RoleCheckType.ANY,
-      requireAuth: true,
       allowIfNoRoles: true
     };
   }
 
   // ========================================
-  // VERIFICACIONES DE ACCESO
+  // VERIFICACIONES DE ROLES
   // ========================================
-
-  /**
-   * Verificar autenticación del usuario
-   */
-  private checkAuthentication(): Observable<boolean> {
-    console.log('🔐 RoleGuard: Checking user authentication');
-
-    return this._authService.isAuthenticated$.pipe(
-      take(1),
-      tap(isAuth => console.log(`🔐 User authenticated: ${isAuth}`))
-    );
-  }
 
   /**
    * Verificar roles del usuario
@@ -270,20 +241,6 @@ export class RoleGuard implements CanActivate, CanActivateChild {
   }
 
   /**
-   * Manejar usuario no autenticado
-   */
-  private handleUnauthenticated(url: string): Observable<UrlTree> {
-    console.log(`🚫 RoleGuard: User not authenticated, redirecting from ${url}`);
-
-    // Redirigir a login con returnUrl
-    const loginUrl = this._router.createUrlTree(['/sing-in'], {
-      queryParams: { returnUrl: url }
-    });
-
-    return of(loginUrl);
-  }
-
-  /**
    * Redirigir a página de no autorizado
    */
   private redirectToUnauthorized(customRedirect?: string): Observable<UrlTree> {
@@ -298,7 +255,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
    * Manejar errores en el guard
    */
   private handleError(error: any, url: string): Observable<UrlTree> {
-    console.error(`❌ RoleGuard: Error checking access to ${url}:`, error);
+    console.error(`❌ RoleGuard: Error checking role access to ${url}:`, error);
 
     // En caso de error, redirigir a página segura
     const errorUrl = this._router.createUrlTree(['/dashboard']);
@@ -316,7 +273,6 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     console.log(`🛡️ RoleGuard configuration for ${url}:`);
     console.log(`  📋 Required roles: [${config.roles.join(', ')}]`);
     console.log(`  🔍 Check type: ${config.checkType}`);
-    console.log(`  🔐 Require auth: ${config.requireAuth}`);
     console.log(`  ↩️ Redirect to: ${config.redirectTo || 'default'}`);
     console.log(`  ✅ Allow if no roles: ${config.allowIfNoRoles}`);
   }
@@ -329,7 +285,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
    * Verificar acceso a una ruta específica programáticamente
    */
   public checkRouteAccess(routePath: string, roleConfig: RoleConfig): Observable<boolean> {
-    console.log(`🔍 Programmatic access check for route: ${routePath}`);
+    console.log(`🔍 Programmatic role check for route: ${routePath}`);
 
     return this.checkRoles(roleConfig, routePath).pipe(
       map(result => typeof result === 'boolean' ? result : false),
