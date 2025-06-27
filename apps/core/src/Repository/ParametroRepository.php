@@ -2,6 +2,13 @@
 
 namespace App\apps\core\Repository;
 
+use App\shared\Doctrine\UidType;
+use App\shared\Repository\PaginatorInterface;
+use App\shared\Service\FilterService;
+use Doctrine\ORM\QueryBuilder;
+use App\apps\core\Entity\Parametro;
+use App\shared\Doctrine\DoctrineEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends DoctrineEntityRepository<Parametro>
