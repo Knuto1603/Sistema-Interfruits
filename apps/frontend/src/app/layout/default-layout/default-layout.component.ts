@@ -4,6 +4,7 @@ import { NgScrollbar } from 'ngx-scrollbar';
 
 import { IconDirective } from '@coreui/icons-angular';
 import {
+  AvatarComponent,
   ContainerComponent, INavData,
   ShadowOnScrollDirective,
   SidebarBrandComponent,
@@ -52,7 +53,8 @@ function isOverflown(element: HTMLElement) {
     ShadowOnScrollDirective,
     AsyncPipe,
     LoadingComponent,
-    NgIf
+    NgIf,
+    AvatarComponent
   ]
 })
 export class DefaultLayoutComponent implements OnInit {
