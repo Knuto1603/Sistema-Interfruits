@@ -68,15 +68,23 @@ export class ParametroListComponent implements OnInit, AfterViewInit {
 	public paginationSizes: number[] = PAGINATION.SIZES;
 
 	public ngOnInit(): void {
-		this.parametroRepository.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    this.isLoading.set(true);
+
+		this.parametroRepository.getAll()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isLoading.set(false))
+      ).subscribe();
 	}
 
 	public ngAfterViewInit(): void {
 		merge(this.paginator().page, this.sort().sortChange)
 			.pipe(
 				takeUntilDestroyed(this.destroyRef),
-				tap(() => this.isLoading.set(true)),
+
 				switchMap(() => {
+          this.isLoading.set(true);
+
 					return this.parametroRepository.getAll(
 						this.paginator().pageIndex,
 						this.paginator().pageSize,
@@ -85,7 +93,10 @@ export class ParametroListComponent implements OnInit, AfterViewInit {
 						this.sort().direction
 					);
 				}),
-				finalize(() => this.isLoading.set(false))
+        tap(() => {
+          this.isLoading.set(false);
+
+        })
 			)
 			.subscribe();
 	}

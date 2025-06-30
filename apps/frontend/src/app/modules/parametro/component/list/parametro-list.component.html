@@ -1,7 +1,7 @@
 <div class="position-absolute flex-grow-1 d-flex flex-column h-100 w-100 inset-0 bg-white dark:bg-transparent">
 
     <!-- Pantalla de carga -->
-    <app-loading *ngIf="isLoading()" message="Cargando usuarios..."></app-loading>
+    <app-loading *ngIf="isLoading()" message="Cargando parametros..."></app-loading>
 
     <!-- Header -->
     <div
@@ -100,18 +100,18 @@
                 ></tr>
                 <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
             </table>
+        </div>
 
-          <div class="bg-light border-top w-100">
-                <mat-paginator
-                    [ngClass]="{ 'disabled': isLoading() }"
-                    [length]="pagination()?.totalItems"
-                    [pageIndex]="pagination()?.page"
-                    [pageSize]="pagination()?.itemsPerPage"
-                    [pageSizeOptions]="paginationSizes"
-                    [showFirstLastButtons]="true"
-                >
-                </mat-paginator>
-            </div>
+        <div class="bg-light border-top w-100">
+          <mat-paginator
+            [ngClass]="{ 'disabled': isLoading() }"
+            [length]="pagination()?.totalItems"
+            [pageIndex]="pagination()?.page"
+            [pageSize]="pagination()?.itemsPerPage"
+            [pageSizeOptions]="paginationSizes"
+            [showFirstLastButtons]="true"
+          >
+          </mat-paginator>
         </div>
     </div>
 </div>
