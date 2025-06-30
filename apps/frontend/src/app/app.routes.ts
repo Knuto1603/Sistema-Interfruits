@@ -44,7 +44,7 @@ export const routes: Routes = [
 
   {
     path: '',
-    canActivate: [AuthGuard, RoleGuard],
+    canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
     component: DefaultLayoutComponent,
     data: {
@@ -87,6 +87,14 @@ export const routes: Routes = [
       },
       {
         path: 'parametro',
+        canActivate: [RoleGuard],
+        data: {
+          roleConfig: {
+            roles: ['ROLE_ADMIN','KNUTO_ROLE'],
+            checkType: RoleCheckType.ALL,
+            redirectTo: ''
+          } as RoleConfig
+        },
         loadChildren: () => import('./modules/parametro/component/parametro.routing').then((m) => m.ParametroRouting)
       },
       {
