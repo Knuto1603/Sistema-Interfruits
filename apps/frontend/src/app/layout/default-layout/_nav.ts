@@ -16,6 +16,18 @@ export const navItems: INavData[] = [
   },
   {
     title: true,
+    name: 'General',
+    attributes: {
+      roles: ['ROLE_ADMIN', 'ROLE_USER'] // Todos pueden ver el dashboard
+    }
+  },
+  {
+    name:'Campaña',
+    url:'campahna',
+    iconComponent: { name: '' }
+  },
+  {
+    title: true,
     name: 'Recepción',
     attributes: {
       roles: ['ROLE_ADMIN', 'ROLE_RECEPCIÓN','KNUTO_ROLE'] // Todos pueden ver el dashboard
@@ -28,8 +40,8 @@ export const navItems: INavData[] = [
   },
   {
     name:'Productor',
-    url:'/sign-in',
-
+    url:'productor',
+    iconComponent: { name: 'heroicons-outline:cube' }
   },
   {
     title: true,

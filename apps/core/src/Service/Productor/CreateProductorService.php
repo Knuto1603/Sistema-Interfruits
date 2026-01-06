@@ -13,7 +13,7 @@ final readonly class CreateProductorService
 {
     public function __construct(
         private ProductorRepository $productorRepository,
-        private productorFactory $productorFactory,
+        private ProductorFactory $productorFactory,
     )
     {
     }
@@ -27,18 +27,41 @@ final readonly class CreateProductorService
         return $productor;
     }
 
-    public function isValid(ProductorDto $productorDto ):void
+    public function isValid(ProductorDto $productorDto): void
     {
-        if(null === $productorDto->nombre){
-            throw new MissingParameterException('Missing parameter nombre  ');
+        if (null === $productorDto->nombre) {
+            throw new MissingParameterException('Missing parameter nombre');
         }
 
-        if(null !== $this->productorRepository->findOneBy(['clp' => $productorDto->clp])){
+        if (null === $productorDto->campahnaId) {
+            throw new MissingParameterException('Missing parameter campahnaId');
+        }
+
+        if (null === $productorDto->codigo) {
+            throw new MissingParameterException('Missing parameter codigo');
+        }
+
+        if (null === $productorDto->clp) {
+            throw new MissingParameterException('Missing parameter clp');
+        }
+
+        // Verificar que el CLP no exista
+        if (null !== $this->productorRepository->findOneBy(['clp' => $productorDto->clp])) {
             throw new RepositoryException(\sprintf('CLP %s ya existe', $productorDto->clp));
         }
 
-        if(null !== $this->productorRepository->findOneBy(['codigo' => $productorDto->codigo])){
-            throw new RepositoryException(\sprintf('Código %s ya existe', $productorDto->codigo));
+        // Verificar que el código no exista en la misma campaña
+        $existingProductor = $this->productorRepository->createQueryBuilder('p')
+            ->join('p.campahna', 'c')
+            ->where('p.codigo = :codigo')
+            ->andWhere('c.uuid = :campahnaId')
+            ->setParameter('codigo', $productorDto->codigo)
+            ->setParameter('campahnaId', $productorDto->campahnaId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (null !== $existingProductor) {
+            throw new RepositoryException(\sprintf('Código %s ya existe en esta campaña', $productorDto->codigo));
         }
     }
 }

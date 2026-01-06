@@ -62,15 +62,15 @@ class SenasaScraperService
             // Paso 2: Realizar la consulta con los IDs correctos
             $postData = [
                 'javax.faces.partial.ajax' => 'true',
-                'javax.faces.source' => 'j_idt21:j_idt28',
+                'javax.faces.source' => 'j_idt21:j_idt24',
                 'javax.faces.partial.execute' => '@all',
-                'javax.faces.partial.render' => 'j_idt21:panelResultado j_idt21:chartcera j_idt21:chartanas',
+                'javax.faces.partial.render' => 'j_idt18:panelResultado j_idt18:chartcera j_idt18:chartanas',
                 'javax.faces.behavior.event' => 'action',
                 'javax.faces.partial.event' => 'click',
-                'j_idt21:j_idt28' => 'j_idt21:j_idt28',
-                'j_idt21' => 'j_idt21',
-                'j_idt21:codigoLP' => $codigoLugar,
-                'j_idt21:fechaMTD_input' => $fecha,
+                'j_idt18:j_idt24' => 'j_idt18:j_idt24',
+                'j_idt18' => 'j_idt18',
+                'j_idt18:codigoLP' => $codigoLugar,
+                'j_idt18:fechaMTD_input' => $fecha,
                 'javax.faces.ViewState' => $viewState
             ];
 
@@ -95,7 +95,6 @@ class SenasaScraperService
             }
 
 
-
             $this->logger->info('Enviando consulta POST', [
                 'codigo' => $codigoLugar,
                 'fecha' => $fecha
@@ -107,7 +106,6 @@ class SenasaScraperService
             ]);
 
             $responseContent = $response->getContent();
-
 
             $this->logger->info('Respuesta recibida', [
                 'status' => $response->getStatusCode(),

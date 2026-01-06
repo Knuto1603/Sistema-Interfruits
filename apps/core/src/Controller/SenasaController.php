@@ -37,8 +37,6 @@ class SenasaController extends AbstractController
             $codigo = trim($data['codigo']);
             $fecha = trim($data['fecha']);
 
-
-
             // Validar código
             if (empty($codigo) || strlen($codigo) < 3) {
                 return $this->json([

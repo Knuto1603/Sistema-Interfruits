@@ -6,13 +6,14 @@ use App\apps\core\Repository\ProductorRepository;
 use App\shared\Entity\EntityTrait;
 use Doctrine\ORM\Mapping as ORM;
 
-
 #[ORM\Entity(repositoryClass: ProductorRepository::class)]
 #[ORM\Table(name: 'core_productor')]
 #[ORM\HasLifecycleCallbacks]
-class Productor
+class Productor implements \Stringable
 {
     use EntityTrait;
+    use CampahnaTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -24,8 +25,22 @@ class Productor
     #[ORM\Column(length: 100)]
     private ?string $nombre = null;
 
-    #[ORM\Column(length: 10)]
+    #[ORM\Column(length: 12)]
     private ?string $clp = null;
+
+    #[ORM\Column(length: 6, nullable: true)]
+    private ?string $mtdCeratitis = null;
+
+    #[ORM\Column(length: 6, nullable: true)]
+    private ?string $mtdAnastrepha = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $productor = null;
+
+    public function __toString(): string
+    {
+        return $this->getNombre() ?? '';
+    }
 
     public function getId(): ?int
     {
@@ -40,7 +55,6 @@ class Productor
     public function setCodigo(string $codigo): static
     {
         $this->codigo = $codigo;
-
         return $this;
     }
 
@@ -52,7 +66,6 @@ class Productor
     public function setNombre(string $nombre): static
     {
         $this->nombre = $nombre;
-
         return $this;
     }
 
@@ -64,7 +77,39 @@ class Productor
     public function setClp(string $clp): static
     {
         $this->clp = $clp;
+        return $this;
+    }
 
+    public function getMtdCeratitis(): ?string
+    {
+        return $this->mtdCeratitis;
+    }
+
+    public function setMtdCeratitis(?string $mtdCeratitis): static
+    {
+        $this->mtdCeratitis = $mtdCeratitis;
+        return $this;
+    }
+
+    public function getMtdAnastrepha(): ?string
+    {
+        return $this->mtdAnastrepha;
+    }
+
+    public function setMtdAnastrepha(?string $mtdAnastrepha): static
+    {
+        $this->mtdAnastrepha = $mtdAnastrepha;
+        return $this;
+    }
+
+    public function getProductor(): ?string
+    {
+        return $this->productor;
+    }
+
+    public function setProductor(string $productor): static
+    {
+        $this->productor = $productor;
         return $this;
     }
 }

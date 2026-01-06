@@ -98,6 +98,31 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/parametro/component/parametro.routing').then((m) => m.ParametroRouting)
       },
       {
+        path: 'campahna',
+        canActivate: [RoleGuard],
+        data: {
+          roleConfig: {
+            roles: ['ROLE_ADMIN','KNUTO_ROLE'],
+            checkType: RoleCheckType.ALL,
+            redirectTo: ''
+          } as RoleConfig
+        },
+        loadChildren: () => import('./modules/campaña/component/campahna.routing').then((m) => m.CampanhaRouting)
+      },
+      {
+        path: 'productor',
+        canActivate: [RoleGuard],
+        data: {
+          roleConfig: {
+            roles: ['ROLE_ADMIN','KNUTO_ROLE'],
+            checkType: RoleCheckType.ALL,
+            redirectTo: ''
+          } as RoleConfig
+        },
+        loadChildren: () => import('./modules/productor/component/productor.routing').then((m) => m.ProductorRouting)
+      },
+
+      {
         path: 'theme',
         loadChildren: () => import('./views/theme/routes').then((m) => m.routes)
       },

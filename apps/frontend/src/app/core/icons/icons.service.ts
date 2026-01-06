@@ -18,7 +18,7 @@ export class IconsService {
             )
         );
         matIconRegistry.addSvgIconSetInNamespace(
-            'mat_outline',
+            'mat-outline',
             domSanitizer.bypassSecurityTrustResourceUrl(
                 'icons/material-outline.svg'
             )

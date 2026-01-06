@@ -1,0 +1,23 @@
+<div>
+  <!-- Pantalla de carga -->
+  <app-loading *ngIf="isLoading()" message="Cargando parametros..."></app-loading>
+
+  <!-- Header -->
+  <div
+    class="d-flex flex-column border-bottom p-3 p-md-4 flex-md-row align-items-sm-center justify-content-sm-between"
+  >
+    <!-- Title -->
+    <div class="h2 fw-bold">Campaña</div>
+    <!-- Actions -->
+    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3 mt-3 mt-sm-0">
+      <!-- Search -->
+      <search-input [pagination]="pagination()" (valueChanged)="searchInputChanged($event)" />
+
+      <div class="d-flex gap-2 mt-3 mt-sm-0">
+        <export-button (click)="download()" />
+        <add-button routerLink="./add" />
+      </div>
+    </div>
+  </div>
+
+</div>

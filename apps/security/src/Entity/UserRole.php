@@ -2,7 +2,7 @@
 
 namespace App\apps\security\Entity;
 
-
+use App\apps\security\Repository\UserRoleRepository;
 use App\shared\Entity\EntityTrait;
 use App\shared\Service\Helper;
 use Doctrine\ORM\Mapping as ORM;
