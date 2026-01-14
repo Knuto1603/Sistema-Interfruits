@@ -165,7 +165,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     // Verificar según el tipo de check
     switch (roleConfig.checkType) {
       case RoleCheckType.ALL:
-        return this.checkAllRoles(requiredRoles$, roleConfig, url);
+        return this.checkAnyRole(requiredRoles$, roleConfig, url);
 
       case RoleCheckType.ANY:
       default:

@@ -430,7 +430,7 @@ export class AuthService {
 
   private checkRoleMatch(userRoles: RoleShared[], allowedRoles: RoleShared[]): boolean {
     return userRoles.some(userRole =>
-      allowedRoles.some(allowedRole => allowedRole.id === userRole.id)
+      allowedRoles.some(allowedRole => allowedRole.name === userRole.name)
     );
   }
 
@@ -440,7 +440,7 @@ export class AuthService {
 
   private checkUserHasAllRoles(userRoles: RoleShared[], requiredRoles: RoleShared[]): boolean {
     return requiredRoles.every(requiredRole =>
-      userRoles.some(userRole => userRole.id === requiredRole.id)
+      userRoles.some(userRole => userRole.name === requiredRole.name)
     );
   }
 
