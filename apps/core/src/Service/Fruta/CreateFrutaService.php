@@ -1,11 +1,11 @@
 <?php
 
-namespace App\apps\core\Service\Contexto\Fruta;
+namespace App\apps\core\Service\Fruta;
 
 use App\apps\core\Entity\Fruta;
-use App\apps\core\Repository\ContextRepository\FrutaRepository;
-use App\apps\core\Service\Contexto\Fruta\Dto\FrutaDto;
-use App\apps\core\Service\Contexto\Fruta\Dto\FrutaFactory;
+use App\apps\core\Repository\FrutaRepository;
+use App\apps\core\Service\Fruta\Dto\FrutaDto;
+use App\apps\core\Service\Fruta\Dto\FrutaFactory;
 use App\shared\Exception\MissingParameterException;
 use App\shared\Exception\RepositoryException;
 

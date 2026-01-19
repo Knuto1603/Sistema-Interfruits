@@ -4,7 +4,7 @@ namespace App\apps\core\Service\Parametro;
 
 use App\apps\core\Repository\ParametroRepository;
 
-final readonly class DeleteParametroService
+final readonly class  DeleteParametroService
 {
     public function __construct(
         private ParametroRepository $parametroRepository,

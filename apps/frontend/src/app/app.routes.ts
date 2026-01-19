@@ -121,7 +121,18 @@ export const routes: Routes = [
         },
         loadChildren: () => import('./modules/productor/component/productor.routing').then((m) => m.ProductorRouting)
       },
-
+      {
+        path: 'fruta',
+        canActivate: [RoleGuard],
+        data: {
+          roleConfig: {
+            roles: ['ROLE_ADMIN','KNUTO_ROLE'],
+            checkType: RoleCheckType.ALL,
+            redirectTo: ''
+          } as RoleConfig
+        },
+        loadChildren: () => import('./modules/fruta/component/fruta.routing').then((m) => m.FrutaRouting)
+      },
       {
         path: 'theme',
         loadChildren: () => import('./views/theme/routes').then((m) => m.routes)
@@ -160,6 +171,16 @@ export const routes: Routes = [
       }
     ]
   },
+
+
+
+
+
+
+
+
+
+
   {
     path: '404',
     loadComponent: () => import('./views/pages/page404/page404.component').then(m => m.Page404Component),

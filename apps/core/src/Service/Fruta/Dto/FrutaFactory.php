@@ -1,6 +1,6 @@
 <?php
 
-namespace App\apps\core\Service\Contexto\Fruta\Dto;
+namespace App\apps\core\Service\Fruta\Dto;
 
 use App\apps\core\Entity\Fruta;
 

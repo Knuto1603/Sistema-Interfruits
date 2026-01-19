@@ -1,6 +1,6 @@
 <?php
 
-namespace App\apps\core\Repository\ContextRepository;
+namespace App\apps\core\Repository;
 
 use App\apps\core\Entity\Fruta;
 use App\shared\Doctrine\DoctrineEntityRepository;

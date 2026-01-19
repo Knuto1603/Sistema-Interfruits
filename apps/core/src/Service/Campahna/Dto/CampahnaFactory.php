@@ -3,8 +3,8 @@
 namespace App\apps\core\Service\Campahna\Dto;
 
 use App\apps\core\Entity\Campahna;
-use App\apps\core\Repository\ContextRepository\FrutaRepository;
 use App\apps\core\Repository\ContextRepository\PeriodoRepository;
+use App\apps\core\Repository\FrutaRepository;
 
 final readonly class CampahnaFactory
 {

@@ -49,7 +49,10 @@ export class FrutaRepositoryService {
   }
 
   public get(id: string | null): Observable<Fruta> {
-    return this.httpClient.get<{ item: Fruta }>(`${this.urlApi}/${id}`).pipe(map(({ item }) => item));
+    return this.httpClient.get<{ item: Fruta }>(`${this.urlApi}/${id}`)
+      .pipe(
+        map(({ item }) => item)
+      );
   }
 
   public create(fruta: Fruta): Observable<string> {

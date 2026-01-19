@@ -57,6 +57,23 @@ export const navItems: INavData[] = [
   },
   {
     title: true,
+    name: 'Configuraciones',
+    attributes: {
+      roles: ['ROLE_ADMIN', 'ROLE_TRAZABILIDAD','KNUTO_ROLE']
+    }
+  },
+  {
+    name:'Parametros',
+    url:'parametro',
+    iconComponent: { name: 'cil-lock-locked' }
+  },
+  {
+    name:'Fruta',
+    url:'fruta',
+  }
+  ,
+  {
+    title: true,
     name: 'Seguridad',
     attributes:{
       roles: ['KNUTO_ROLE']
@@ -72,9 +89,5 @@ export const navItems: INavData[] = [
     url:'/security/role',
     iconComponent: { name: 'cil-lock-locked' }
   },
-  {
-    name:'Parametros',
-    url:'parametro',
-    iconComponent: { name: 'cil-lock-locked' }
-  }
+
 ];

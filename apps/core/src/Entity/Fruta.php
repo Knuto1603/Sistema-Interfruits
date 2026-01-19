@@ -2,7 +2,7 @@
 
 namespace App\apps\core\Entity;
 
-use App\apps\core\Repository\ContextRepository\FrutaRepository;
+use App\apps\core\Repository\FrutaRepository;
 use App\shared\Entity\EntityTrait;
 use Doctrine\ORM\Mapping as ORM;
 

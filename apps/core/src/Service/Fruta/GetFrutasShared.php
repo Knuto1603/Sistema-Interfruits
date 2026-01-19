@@ -1,9 +1,8 @@
 <?php
 
-namespace App\apps\core\Service\Contexto\Fruta;
+namespace App\apps\core\Service\Fruta;
 
-use App\apps\core\Repository\ContextRepository\FrutaRepository;
-use App\apps\core\Service\Contexto\Fruta\Dto\FrutaDtoTransformer;
+use App\apps\core\Repository\FrutaRepository;
 use App\shared\Doctrine\UidType;
 
 final readonly class GetFrutasShared

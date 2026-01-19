@@ -37,7 +37,6 @@ export class DownloadService {
 					link.click();
 				} catch (error) {
 					window.URL.revokeObjectURL(url);
-					// console.error('error download', error);
 				}
 			});
 	}
