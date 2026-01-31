@@ -1,97 +1,48 @@
-// components/selector-contexto/selector-contexto.component.ts
-import {Component, DestroyRef, inject, OnInit, signal} from "@angular/core";
-import {FormsModule} from "@angular/forms";
-import {NgForOf, NgIf} from "@angular/common";
-import {ContextoService} from "@core/context/contexto.service";
-import {FrutaShared, FrutasResponse} from "@modules/fruta/interface/fruta.interface";
-import {PeriodoShared} from "@modules/periodo/interface/periodo.interface";
-import {LoadingComponent} from "@shared/component/loading-screen/loading-screen.component";
-import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '@environments/environment';
+import { ContextoService } from './contexto.service';
+import { Router } from '@angular/router';
+import { ModalModule, ButtonModule, ListGroupModule } from '@coreui/angular';
 
 @Component({
-  selector: 'app-selector-contexto',
-  imports: [
-    FormsModule,
-    NgForOf,
-    NgIf,
-    LoadingComponent
-  ],
-  templateUrl: './selector-context.component.html',
+  selector: 'app-selector-context',
+  standalone: true,
+  imports: [CommonModule, ModalModule, ButtonModule, ListGroupModule],
+  template: 'selector-context.component.html'
 })
-export class SelectorContextoComponent implements OnInit {
+export class SelectorContextComponent implements OnInit {
+  private http = inject(HttpClient);
+  private contexto = inject(ContextoService);
+  private router = inject(Router);
+  private urlApi: string = `${environment.apiCore}/api/campahnas`;
 
-  private destroyRef: DestroyRef = inject(DestroyRef);
-  private contextoService = inject(ContextoService);
-
-  public periodos = signal<PeriodoShared[]>([]);
-  public frutas = signal<FrutaShared[]>([]);
-  public isLoading = signal<boolean>(false);
-
-
-  periodoSeleccionado = '';
-  frutaSeleccionada = '';
-  contextoActual: any;
-
-  periodoNombre: string;
-  frutaNombre: string;
+  campahnas: any[] = [];
+  visible = false;
 
   ngOnInit() {
-
-    this.cargarPeriodos();
-    this.cargarFrutas();
-
-    this.contextoService.contexto$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(contexto => {
-      this.contextoActual = contexto;
-      if (contexto) {
-        this.periodoSeleccionado = contexto.periodoId;
-        this.frutaSeleccionada = contexto.frutaId;
-      }
-      this.isLoading.set(false);
-    });
-
-    this.contextoService.getNombreFrutaPorId(this.frutaSeleccionada)
-      .subscribe(nombreFruta => {
-        console.log(nombreFruta);
-        this.frutaNombre = nombreFruta || 'Todas las frutas';
-      });
-
-    this.contextoService.getNombrePeriodoPorId(this.periodoSeleccionado)
-      .subscribe(nombrePeriodo => {
-        console.log(nombrePeriodo);
-        this.periodoNombre = nombrePeriodo || 'Todos los periodos';
-      });
+    // Si no hay campaña elegida, mostramos el modal
+    if (!this.contexto.getCampanhaId()) {
+      this.cargarCampahnas();
+    }
   }
 
-  cargarPeriodos() {
-    this.contextoService.getPeriodos()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(
-        periodos =>
-        {
-          this.periodos.set(periodos);
-        }
-    );
-  }
-
-  cargarFrutas() {
-    this.contextoService.getFrutas()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(frutas => {
-      this.frutas.set(frutas);
+  cargarCampahnas() {
+    this.http.get<any[]>(this.urlApi).subscribe(res => {
+      this.campahnas = res;
+      this.visible = true;
     });
   }
 
-  aplicarContexto() {
-    this.isLoading.set(true);
-    if(this.periodoSeleccionado == 'all' || this.frutaSeleccionada == 'all') {
-      this.periodoSeleccionado = '';
-      this.frutaSeleccionada = '';
-    };
-    this.contextoService.establecerContexto(
-      this.periodoSeleccionado,
-      this.frutaSeleccionada
-    );
+  seleccionar(campahna: any) {
+    this.contexto.setCampanha(campahna);
+    this.visible = false;
+    // Redirigir al dashboard o refrescar la página actual
+    window.location.reload();
+  }
+
+  handleVisibleChange(event: boolean) {
+    this.visible = event;
   }
 }

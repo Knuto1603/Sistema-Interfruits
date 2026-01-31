@@ -27,8 +27,7 @@ class  CampahnaRepository extends DoctrineEntityRepository
     public function allQuery(): QueryBuilder
     {
         return $this->createQueryBuilder('campahna')
-            ->select(['campahna', 'periodo', 'fruta'])
-            ->leftJoin('campahna.periodo', 'periodo')
+            ->select(['campahna', 'fruta'])
             ->leftJoin('campahna.fruta', 'fruta');
     }
 
@@ -46,7 +45,6 @@ class  CampahnaRepository extends DoctrineEntityRepository
             ->select('campahna.nombre as nombre')
             ->addSelect('campahna.descripcion as descripcion')
             ->addSelect('fruta.nombre as frutaNombre')
-            ->addSelect('periodo.nombre as periodoNombre')
             ->addSelect('campahna.isActive as isActive')
             ->addSelect('campahna.createdAt as createdAt');
 
@@ -63,10 +61,9 @@ class  CampahnaRepository extends DoctrineEntityRepository
         return $this->allQuery()
             ->select('campahna.uuid as id')
             ->addSelect('campahna.nombre as nombre')
-            ->addSelect("CONCAT(fruta.nombre, ' - ', periodo.nombre, ': ', campahna.nombre) as nombreCompleto")
+            ->addSelect('campahna.fechaInicio as fechaInicio')
             ->where('campahna.isActive = true')
             ->orderBy('fruta.nombre', 'asc')
-            ->addOrderBy('periodo.nombre', 'asc')
             ->addOrderBy('campahna.nombre', 'asc')
             ->getQuery()
             ->getResult();
@@ -88,13 +85,12 @@ class  CampahnaRepository extends DoctrineEntityRepository
 
     /**
      * Verificar si existe una campaña con el mismo nombre, fruta y período
-     */
-    public function existsByNombreFrutaPeriodo(string $nombre, string $frutaId, string $periodoId, ?string $excludeId = null): bool
+
+    public function existsByNombreFruta(string $nombre, string $frutaId, ?string $excludeId = null): bool
     {
         $qb = $this->createQueryBuilder('campahna')
             ->select('COUNT(campahna.id)')
             ->join('campahna.fruta', 'fruta')
-            ->join('campahna.periodo', 'periodo')
             ->where('campahna.nombre = :nombre')
             ->andWhere('fruta.uuid = :frutaId')
             ->andWhere('periodo.uuid = :periodoId')
@@ -108,7 +104,7 @@ class  CampahnaRepository extends DoctrineEntityRepository
         }
 
         return $qb->getQuery()->getSingleScalarResult() > 0;
-    }
+    }*/
 
     public function allShared()
     {

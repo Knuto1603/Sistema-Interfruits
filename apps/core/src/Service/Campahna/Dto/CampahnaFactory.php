@@ -3,13 +3,12 @@
 namespace App\apps\core\Service\Campahna\Dto;
 
 use App\apps\core\Entity\Campahna;
-use App\apps\core\Repository\ContextRepository\PeriodoRepository;
 use App\apps\core\Repository\FrutaRepository;
+
 
 final readonly class CampahnaFactory
 {
     public function __construct(
-        private PeriodoRepository $periodoRepository,
         private FrutaRepository $frutaRepository,
     ) {
     }
@@ -27,11 +26,18 @@ final readonly class CampahnaFactory
         $campahna->setNombre($campahnaDto->nombre);
         $campahna->setDescripcion($campahnaDto->descripcion);
 
-        if ($campahnaDto->periodoId) {
-            $periodo = $this->periodoRepository->ofId($campahnaDto->periodoId);
-            $campahna->setPeriodo($periodo);
+        // Conversión de fechas de string (ISO) a objeto DateTime
+        if ($campahnaDto->fechaInicio) {
+            $campahna->setFechaInicio(new \DateTime($campahnaDto->fechaInicio));
         }
 
+        if ($campahnaDto->fechaFin) {
+            $campahna->setFechaFin(new \DateTime($campahnaDto->fechaFin));
+        } else {
+            $campahna->setFechaFin(null);
+        }
+
+        // Relación con Fruta (Producto)
         if ($campahnaDto->frutaId) {
             $fruta = $this->frutaRepository->ofId($campahnaDto->frutaId);
             $campahna->setFruta($fruta);

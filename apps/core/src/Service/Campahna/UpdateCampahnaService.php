@@ -29,10 +29,9 @@ final readonly class UpdateCampahnaService
     public function isValid(CampahnaDto $campahnaDto, ?Campahna $campahna): void
     {
         // Verificar que no exista otra campaña con el mismo nombre, fruta y período
-        if ($this->campahnaRepository->existsByNombreFrutaPeriodo(
+       /* if ($this->campahnaRepository->existsByNombreFrutaPeriodo(
             $campahnaDto->nombre,
             $campahnaDto->frutaId,
-            $campahnaDto->periodoId,
             $campahna->uuid()
         )) {
             throw new RepositoryException(
@@ -41,6 +40,6 @@ final readonly class UpdateCampahnaService
                     $campahnaDto->nombre
                 )
             );
-        }
+        }*/
     }
 }

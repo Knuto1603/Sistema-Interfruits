@@ -17,6 +17,7 @@ export class ButtonGroupsComponent {
     checkbox2: false,
     checkbox3: false
   });
+  // @ts-ignore
   formRadio1 = new UntypedFormGroup({
     radio1: new UntypedFormControl('Radio1')
   });

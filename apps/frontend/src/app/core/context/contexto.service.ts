@@ -1,97 +1,47 @@
-// services/contexto.service.ts
-import {inject, Injectable, signal} from "@angular/core";
-import {BehaviorSubject, map, tap} from "rxjs";
-import {HttpClient} from "@angular/common/http";
-import {environment} from "@environments/environment";
-import {FrutaShared} from "@modules/fruta/interface/fruta.interface";
-import { FrutasSharedService } from "@modules/fruta/repository/futa-shared.service";
-import {PeriodosSharedService} from "@modules/periodo/repository/periodo-shared.service";
-import { switchMap, take } from 'rxjs/operators';
+import { Injectable, signal } from '@angular/core';
+import {Campanha} from "@modules/campaña/interface/campaña.interface";
 
 
 @Injectable({
   providedIn: 'root'
 })
 export class ContextoService {
+  // Usamos signals para que la UI reaccione al cambio de campaña
+  private _campanhaSeleccionada = signal<Campanha | null>(this.getStoredCampanha());
 
-  private urlContextApi: string = `${environment.apiCore}/api/contexto`;
+  constructor() {}
 
-  private contextoActual = new BehaviorSubject<any>(null);
-
-  private frutaSharedService = inject(FrutasSharedService);
-  private periodoSharedService = inject(PeriodosSharedService);
-
-  constructor(private http: HttpClient) {
-    this.cargarContextoDesdeStorage();
+  /**
+   * Obtener la campaña actual
+   */
+  get campanha() {
+    return this._campanhaSeleccionada;
   }
 
-
-  get contexto$() {
-    return this.contextoActual.asObservable();
+  /**
+   * Guardar la campaña seleccionada y persistirla
+   */
+  setCampanha(campanha: Campanha): void {
+    localStorage.setItem('selected_campanha_id', campanha.id.toString());
+    localStorage.setItem('selected_campanha_data', JSON.stringify(campanha));
+    this._campanhaSeleccionada.set(campanha);
   }
 
-  get getContextoActual() {
-    return this.contextoActual.value;
+  /**
+   * Obtener solo el ID para los headers
+   */
+  getCampanhaId(): string | null {
+    return localStorage.getItem('selected_campanha_id');
   }
 
-  establecerContexto(periodoId: string, frutaId: string) {
-      const contexto = { periodoId, frutaId };
-      this.contextoActual.next(contexto);
-      localStorage.setItem('contexto', JSON.stringify(contexto));
+  private getStoredCampanha(): Campanha | null {
+    const data = localStorage.getItem('selected_campanha_data');
+    return data ? JSON.parse(data) : null;
   }
 
-
-  private cargarContextoDesdeStorage() {
-    const contexto = localStorage.getItem('contexto');
-    if (contexto) {
-      this.contextoActual.next(JSON.parse(contexto));
-    }
+  logout(): void {
+    localStorage.removeItem('selected_campanha_id');
+    localStorage.removeItem('selected_campanha_data');
+    this._campanhaSeleccionada.set(null);
   }
-
-
-  getPeriodos() {
-    return this.periodoSharedService.getDataLocal();
-  }
-
-
-  getFrutas() {
-    return this.frutaSharedService.getDataLocal();
-  }
-
-  getNombreFrutaPorId(frutaId: string) {
-    return this.getFrutas()
-      .pipe(
-        map(frutas => frutas.find(f => f.id === frutaId)),
-        tap(fruta => {
-          if (!fruta) {
-            console.warn(`Fruta con ID ${frutaId} no encontrada.`);
-          }
-        }),
-        map(fruta => fruta ? fruta.nombre : null)
-      );
-  }
-
-  getNombrePeriodoPorId(periodoId: string) {
-    return this.getPeriodos()
-      .pipe(
-        switchMap(periodos => {
-          const periodo = periodos.find(p => p.id === periodoId);
-          if (!periodo) {
-            console.warn(`Periodo con ID ${periodoId} no encontrado.`);
-            return [null];
-          }
-          return [periodo.nombre];
-        })
-      );
-  }
-
-
-  getContextoParaRequest(): any {
-    const contexto = this.contextoActual.value;
-    return contexto ? {
-      periodoId: contexto.periodoId,
-      frutaId: contexto.frutaId
-    } : null;
-  }
-
 }

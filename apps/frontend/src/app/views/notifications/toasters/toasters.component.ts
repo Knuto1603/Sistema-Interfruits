@@ -58,6 +58,7 @@ export class ToastersComponent implements OnInit {
   delay = 5000;
   fade = true;
 
+  // @ts-ignore
   toasterForm = new UntypedFormGroup({
     autohide: new UntypedFormControl(this.autohide),
     delay: new UntypedFormControl({ value: this.delay, disabled: !this.autohide }),
@@ -69,7 +70,7 @@ export class ToastersComponent implements OnInit {
 
   formChanges: Observable<any> = this.toasterForm.valueChanges.pipe(
     takeUntilDestroyed(),
-    filter(e => e.autohide !== this.autohide)
+    filter((e:any) => e.autohide !== this.autohide)
   );
 
   @ViewChildren(ToasterComponent) viewChildren!: QueryList<ToasterComponent>;

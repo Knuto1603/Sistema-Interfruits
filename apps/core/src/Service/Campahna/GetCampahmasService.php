@@ -16,10 +16,11 @@ use App\shared\Service\Sorting\SortByRequestField;
 readonly class GetCampahmasService
 {
     public function __construct(
-        protected CampahnaRepository $repository,
-        protected FilterService $filterService,
+        protected CampahnaRepository     $repository,
+        protected FilterService          $filterService,
         protected CampahnaDtoTransformer $dtoTransformer,
-    ) {
+    )
+    {
     }
 
     public function execute(FilterDto|CampahnaFilterDto $filterDto): array
@@ -30,10 +31,9 @@ readonly class GetCampahmasService
             'campahna.nombre',
             'campahna.descripcion',
             'fruta.nombre',
-            'periodo.nombre',
         ]));
 
-        $this->newFilters($filterDto);
+        //$this->newFilters($filterDto);
 
         // sortings
         $sorting = SortingDto::create($filterDto->sort, $filterDto->direction);
@@ -41,7 +41,6 @@ readonly class GetCampahmasService
             'nombre' => 'campahna.nombre',
             'descripcion' => 'campahna.descripcion',
             'fruta' => 'fruta.nombre',
-            'periodo' => 'periodo.nombre',
             'createdAt' => 'campahna.createdAt',
         ]));
 
@@ -51,13 +50,15 @@ readonly class GetCampahmasService
 
         return ['items' => $items, 'pagination' => $paginator->pagination()];
     }
+}
 
+/*
     protected function newFilters(FilterDto|CampahnaFilterDto $filterDto): void
     {
         if ($filterDto instanceof CampahnaFilterDto) {
             // Filtro por período
             if ($filterDto->periodoId) {
-                $this->filterService->addCondition(
+                $this->filterService->addFilter(
                     'periodo.uuid = :periodoId',
                     ['periodoId' => UidType::fromString($filterDto->periodoId)]
                 );
@@ -65,7 +66,7 @@ readonly class GetCampahmasService
 
             // Filtro por fruta
             if ($filterDto->frutaId) {
-                $this->filterService->addCondition(
+                $this->filterService->addFilter(
                     'fruta.uuid = :frutaId',
                     ['frutaId' => UidType::fromString($filterDto->frutaId)]
                 );
@@ -81,3 +82,4 @@ readonly class GetCampahmasService
         }
     }
 }
+*/

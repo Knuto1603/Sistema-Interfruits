@@ -21,7 +21,7 @@ export class CamphnaRepositoryService {
   private _campahnas = signal<Campanha[]>([]);
   private _pagination = signal<Pagination | null>(null);
 
-  public parametros = this._campahnas.asReadonly();
+  public campahnas = this._campahnas.asReadonly();
   public pagination = this._pagination.asReadonly();
 
   public getAll(

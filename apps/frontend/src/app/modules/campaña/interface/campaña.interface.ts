@@ -4,7 +4,7 @@ export interface Campanha{
   id: string;
   nombre: string;
   descripcion: string;
-  periodoId?: number;
+  fechaInicio: string|null;
   frutaId?: number;
   isActive?: boolean;
 }
@@ -18,6 +18,5 @@ export interface CampanhaShared {
   id?: string;
   nombre: string;
   descripcion: string;
-  periodoAlias: string;
   frutaAlias: string;
 }

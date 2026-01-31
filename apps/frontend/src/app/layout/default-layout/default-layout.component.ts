@@ -22,8 +22,7 @@ import {NavigationService} from "@core/navigation/navigation.service";
 import {finalize, Observable, take, filter, Subscription} from "rxjs";
 import {AsyncPipe, NgIf} from "@angular/common";
 import {LoadingComponent} from "@shared/component/loading-screen/loading-screen.component";
-import {ContextoService} from "@core/context/contexto.service";
-import {Contexto} from "@core/context/contexto.interface";
+
 
 function isOverflown(element: HTMLElement) {
   return (
@@ -59,33 +58,17 @@ function isOverflown(element: HTMLElement) {
   ]
 })
 export class DefaultLayoutComponent implements OnInit, AfterViewInit{
-  private contextoService = inject(ContextoService);
 
   public navItems$: Observable<INavData[]>;
   public isLoading = signal<boolean>(false);
 
-  private contexto: any;
+
   protected nombreFruta: string;
   protected nombrePeriodo: string;
 
   constructor(private navigationService: NavigationService) {}
 
   ngAfterViewInit(): void {
-    this.contextoService.getNombreFrutaPorId(this.nombreFruta)
-      .pipe(
-        take(1)
-      )
-      .subscribe(nombre => {
-        this.nombreFruta = nombre || 'Todas las frutas';
-      });
-
-    this.contextoService.getNombrePeriodoPorId(this.nombrePeriodo)
-      .pipe(
-        take(1)
-      )
-      .subscribe(nombre => {
-        this.nombrePeriodo = nombre || 'Todos los periodos';
-      });
     }
   ngOnInit(): void {
     this.isLoading.set(true)
@@ -98,18 +81,6 @@ export class DefaultLayoutComponent implements OnInit, AfterViewInit{
       take(1),
       finalize(() => this.isLoading.set(false))
     ).subscribe();
-
-    this.contextoService.contexto$
-      .pipe(
-        filter(contexto => contexto !== null),
-        take(1)
-      )
-      .subscribe((contexto: Contexto) => {
-        this.contexto = contexto;
-        console.log('Contexto:',contexto);
-        this.nombreFruta = contexto.frutaId;
-        this.nombrePeriodo = contexto.periodoId;
-      });
 
   }
 }

@@ -1,37 +1,18 @@
-<app-loading *ngIf="isLoading()" message="Cargando parametros..."></app-loading>
-
-<div class="d-flex gap-3 mb-3">
-  <div>
-    <label class="form-label">Periodo</label>
-    <select class="form-select" [(ngModel)]="periodoSeleccionado">
-      <option value="">Seleccionar periodo</option>
-      <option value="all">Todos los Periodos</option>
-      <option *ngFor="let periodo of periodos()" [value]="periodo.id">
-        {{ periodo.codigo }}
-      </option>
-    </select>
-  </div>
-
-  <div>
-    <label class="form-label">Fruta</label>
-    <select class="form-select" [(ngModel)]="frutaSeleccionada">
-      <option selected value="">Seleccionar fruta</option>
-      <option selected value="all">Todas las fruta</option>
-      <option *ngFor="let fruta of frutas()" [value]="fruta.id">
-        {{ fruta.nombre }}
-      </option>
-    </select>
-  </div>
-
-  <div class="d-flex align-items-end">
-    <button class="btn btn-primary"
-            (click)="aplicarContexto()"
-            [disabled]="!periodoSeleccionado || !frutaSeleccionada">
-      Aplicar
-    </button>
-  </div>
-</div>
-
-<div *ngIf="contextoActual" class="alert alert-info">
-  <strong>Contexto actual:</strong> {{ periodoNombre }} - {{ frutaNombre }}
-</div>
+<c-modal [visible]="visible" (visibleChange)="handleVisibleChange($event)" backdrop="static">
+  <c-modal-header>
+    <c-modal-title>Seleccionar Campaña de Trabajo</c-modal-title>
+  </c-modal-header>
+  <c-modal-body>
+    <p>Seleccione la campaña para comenzar a registrar datos. Esto filtrará lotes, pallets y despachos.</p>
+    <c-list-group>
+      <button
+        cListGroupItem
+        *ngFor="let c of campahnas"
+        (click)="seleccionar(c)"
+        class="d-flex justify-content-between align-items-center">
+        {{ c.nombre }}
+        <span class="badge bg-primary">{{ c.frutaNombre }}</span>
+      </button>
+    </c-list-group>
+  </c-modal-body>
+</c-modal>

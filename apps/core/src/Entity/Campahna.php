@@ -6,8 +6,13 @@ use App\apps\core\Repository\CampahnaRepository;
 use App\shared\Entity\EntityTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * Entidad que representa una campaña agrícola.
+ * Según MER 3.4: Aísla los datos de procesos y controla el acceso.
+ */
 #[ORM\Entity(repositoryClass: CampahnaRepository::class)]
 #[ORM\Table(name: 'core_campahna')]
 #[ORM\HasLifecycleCallbacks]
@@ -21,14 +26,17 @@ class Campahna implements \Stringable
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
-    private ?string $nombre = null;
+    private ?string $nombre = null; // Ej: "Mango 2025-2026"
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $descripcion = null;
 
-    #[ORM\ManyToOne(targetEntity: Periodo::class)]
-    #[ORM\JoinColumn(name: 'periodo_id', nullable: false)]
-    private ?Periodo $periodo = null;
+    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    private ?\DateTimeInterface $fechaInicio = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $fechaFin = null;
+
 
     #[ORM\ManyToOne(targetEntity: Fruta::class)]
     #[ORM\JoinColumn(name: 'fruta_id', nullable: false)]
@@ -43,6 +51,7 @@ class Campahna implements \Stringable
     public function __construct()
     {
         $this->productores = new ArrayCollection();
+        $this->fechaInicio = new \DateTime(); // Se inicializa al momento de crear
     }
 
     public function __toString(): string
@@ -50,62 +59,32 @@ class Campahna implements \Stringable
         return $this->getNombre() ?? '';
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+    public function getId(): ?int { return $this->id; }
 
-    public function getNombre(): ?string
-    {
-        return $this->nombre;
-    }
+    public function getNombre(): ?string { return $this->nombre; }
 
-    public function setNombre(string $nombre): static
-    {
-        $this->nombre = $nombre;
-        return $this;
-    }
+    public function setNombre(string $nombre): static { $this->nombre = $nombre; return $this; }
 
-    public function getDescripcion(): ?string
-    {
-        return $this->descripcion;
-    }
+    public function getDescripcion(): ?string { return $this->descripcion; }
 
-    public function setDescripcion(?string $descripcion): static
-    {
-        $this->descripcion = $descripcion;
-        return $this;
-    }
+    public function setDescripcion(?string $descripcion): static { $this->descripcion = $descripcion; return $this; }
 
-    public function getPeriodo(): ?Periodo
-    {
-        return $this->periodo;
-    }
+    public function getFechaInicio(): ?\DateTimeInterface { return $this->fechaInicio; }
 
-    public function setPeriodo(?Periodo $periodo): static
-    {
-        $this->periodo = $periodo;
-        return $this;
-    }
+    public function setFechaInicio(\DateTimeInterface $fechaInicio): self { $this->fechaInicio = $fechaInicio; return $this; }
 
-    public function getFruta(): ?Fruta
-    {
-        return $this->fruta;
-    }
+    public function getFechaFin(): ?\DateTimeInterface { return $this->fechaFin; }
 
-    public function setFruta(?Fruta $fruta): static
-    {
-        $this->fruta = $fruta;
-        return $this;
-    }
+    public function setFechaFin(?\DateTimeInterface $fechaFin): self { $this->fechaFin = $fechaFin; return $this; }
+
+    public function getFruta(): ?Fruta { return $this->fruta; }
+
+    public function setFruta(?Fruta $fruta): static { $this->fruta = $fruta; return $this; }
 
     /**
      * @return Collection<int, Productor>
      */
-    public function getProductores(): Collection
-    {
-        return $this->productores;
-    }
+    public function getProductores(): Collection { return $this->productores; }
 
     public function addProductor(Productor $productor): static
     {
@@ -116,23 +95,16 @@ class Campahna implements \Stringable
         return $this;
     }
 
-    public function removeProductor(Productor $productor): static
-    {
-        if ($this->productores->removeElement($productor)) {
-            if ($productor->getCampahna() === $this) {
-                $productor->setCampahna(null);
-            }
-        }
-        return $this;
-    }
-
     /**
-     * Obtener nombre completo para mostrar (Fruta - Período: Nombre)
+     * Helper para mostrar información completa en el selector del frontend
      */
     public function getNombreCompleto(): string
     {
-        $fruta = $this->fruta?->getNombre() ?? 'Sin fruta';
-        $periodo = $this->periodo?->getNombre() ?? 'Sin período';
-        return "{$fruta} - {$periodo}: {$this->nombre}";
+        $frutaNombre = $this->fruta?->getNombre() ?? 'Sin Fruta';
+        $rango = $this->fechaFin
+            ? "({$this->fechaInicio->format('Y')} - {$this->fechaFin->format('Y')})"
+            : "(Desde {$this->fechaInicio->format('Y')})";
+
+        return "{$frutaNombre}: {$this->nombre} {$rango}";
     }
 }

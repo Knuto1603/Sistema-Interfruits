@@ -20,15 +20,17 @@ final class CampahnaDto implements DtoRequestInterface
         public ?string $descripcion = null,
 
         #[Assert\NotBlank]
-        #[Uid]
-        public ?string $periodoId = null,
+        #[Assert\Date]
+        public ?string $fechaInicio = null,
+
+        #[Assert\Date]
+        public ?string $fechaFin = null,
 
         #[Assert\NotBlank]
         #[Uid]
         public ?string $frutaId = null,
 
-        // Campos para mostrar nombres en respuestas
-        public ?string $periodoNombre = null,
+        // Campos complementarios para respuestas (Output)
         public ?string $frutaNombre = null,
         public ?string $nombreCompleto = null,
     ) {

@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 class Productor implements \Stringable
 {
     use EntityTrait;
-    use CampahnaTrait;
+    use ContextTrait;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

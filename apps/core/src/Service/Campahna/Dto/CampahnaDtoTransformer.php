@@ -18,11 +18,18 @@ final class CampahnaDtoTransformer extends DtoTransformer
         $dto = new CampahnaDto();
         $dto->nombre = $object->getNombre();
         $dto->descripcion = $object->getDescripcion();
-        $dto->periodoId = UidType::toString($object->getPeriodo()?->uuid());
+
+        // Transformación de fechas a formato string para el DTO
+        $dto->fechaInicio = $object->getFechaInicio()?->format('Y-m-d');
+        $dto->fechaFin = $object->getFechaFin()?->format('Y-m-d');
+
+        // Mapeo de Fruta (Producto)
         $dto->frutaId = UidType::toString($object->getFruta()?->uuid());
-        $dto->periodoNombre = $object->getPeriodo()?->getNombre();
         $dto->frutaNombre = $object->getFruta()?->getNombre();
+
+        // Información consolidada para el frontend
         $dto->nombreCompleto = $object->getNombreCompleto();
+
         $dto->ofEntity($object);
 
         return $dto;

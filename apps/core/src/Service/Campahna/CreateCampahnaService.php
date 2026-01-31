@@ -37,15 +37,14 @@ final readonly class CreateCampahnaService
             throw new MissingParameterException('Missing parameter frutaId');
         }
 
-        if (null === $campahnaDto->periodoId) {
-            throw new MissingParameterException('Missing parameter periodoId');
+        if (null === $campahnaDto->fechaInicio) {
+            throw new MissingParameterException('Missing parameter fechaInicio');
         }
-
+        /*
         // Verificar que no exista otra campaña con el mismo nombre, fruta y período
         if ($this->campahnaRepository->existsByNombreFrutaPeriodo(
             $campahnaDto->nombre,
-            $campahnaDto->frutaId,
-            $campahnaDto->periodoId
+            $campahnaDto->frutaId
         )) {
             throw new RepositoryException(
                 \sprintf(
@@ -53,6 +52,6 @@ final readonly class CreateCampahnaService
                     $campahnaDto->nombre
                 )
             );
-        }
+        }*/
     }
 }

@@ -1,12 +1,12 @@
-import {inject, Injectable, signal} from "@angular/core";
-import {environment} from "@environments/environment";
-import {HttpClient} from "@angular/common/http";
-import {DownloadService} from "@shared/service/download.service";
-import {Pagination} from "@shared/interface/pagination.interface";
-import {LastProductorCode, Productor, ProductoresResponse} from "@modules/productor/interface/productor.interface";
-import {PAGINATION} from "@shared/app.constants";
-import {concatMap, map, Observable, of, tap} from "rxjs";
-import {FilterData} from "@shared/interface/filter-data.interface";
+import { inject, Injectable, signal } from "@angular/core";
+import { environment } from "@environments/environment";
+import { HttpClient } from "@angular/common/http";
+import { DownloadService } from "@shared/service/download.service";
+import { Pagination } from "@shared/interface/pagination.interface";
+import { Productor, ProductoresResponse } from "@modules/productor/interface/productor.interface";
+import { PAGINATION } from "@shared/app.constants";
+import { concatMap, map, Observable, of, tap } from "rxjs";
+import { FilterData } from "@shared/interface/filter-data.interface";
 import { ContextoService } from "@core/context/contexto.service";
 
 @Injectable({
@@ -19,15 +19,15 @@ export class ProductorRepositoryService {
   private downloadService = inject(DownloadService);
   private contextoService = inject(ContextoService);
 
-
   private _productores = signal<Productor[]>([]);
   private _pagination = signal<Pagination | null>(null);
 
   public productores = this._productores.asReadonly();
   public pagination = this._pagination.asReadonly();
 
-
-
+  /**
+   * Obtiene los productores filtrados por el contexto de la campaña seleccionada.
+   */
   public getAll(
     page: number = PAGINATION.PAGE,
     itemsPerPage: number = PAGINATION.ITEMS_PER_PAGE,
@@ -36,7 +36,8 @@ export class ProductorRepositoryService {
     direction: 'asc' | 'desc' | '' = 'asc'
   ): Observable<ProductoresResponse> {
 
-    const contexto = this.contextoService.getContextoParaRequest();
+    // Obtenemos la campaña activa del signal
+    const campahna = this.contextoService.campanha();
 
     return this.httpClient
       .get<ProductoresResponse>(`${this.urlApi}/context`, {
@@ -46,8 +47,9 @@ export class ProductorRepositoryService {
           search: search || '',
           sort,
           direction,
-          periodoId: contexto.periodoId ?? '',
-          frutaId: contexto.frutaId ??  '',
+          // Ya no enviamos periodoId, enviamos la campaña y fruta del contexto
+          campahnaId: campahna?.id ?? '',
+          frutaId: campahna?.frutaId ??  '',
         }
       })
       .pipe(
@@ -70,7 +72,6 @@ export class ProductorRepositoryService {
           if (status) {
             this._productores.update((items) => [item, ...items]);
           }
-
           return of(message);
         })
       );
@@ -87,14 +88,11 @@ export class ProductorRepositoryService {
               if (index >= 0) {
                 const updated = [...items];
                 updated[index] = item;
-
                 return updated;
               }
-
               return items;
             });
           }
-
           return of(message);
         })
       );
@@ -102,7 +100,6 @@ export class ProductorRepositoryService {
 
   public changeActive(id: string, active: boolean): Observable<string> {
     const type: 'disable' | 'enable' = active ? 'disable' : 'enable';
-
     return this.httpClient.patch<{ item: Productor; message: string }>(`${this.urlApi}/${id}/${type}`, {}).pipe(
       concatMap(({ item, message }) => {
         this._productores.update((items) => {
@@ -110,13 +107,10 @@ export class ProductorRepositoryService {
           if (index >= 0) {
             const updated = [...items];
             updated[index] = item;
-
             return updated;
           }
-
           return items;
         });
-
         return of(message);
       })
     );
@@ -128,7 +122,6 @@ export class ProductorRepositoryService {
         if (status) {
           this._productores.update((items) => items.filter((item) => item.id !== id));
         }
-
         return of(message);
       })
     );
@@ -140,13 +133,7 @@ export class ProductorRepositoryService {
 
   public getLastCode(): Observable<string | null> {
     return this.httpClient.get<{ lastCode: string }>(`${this.urlApi}/last-code`).pipe(
-      map(({ lastCode }) => {
-        if (lastCode) {
-          return lastCode;
-        }
-        return null;
-      })
+      map(({ lastCode }) => lastCode || null)
     );
   }
-
 }

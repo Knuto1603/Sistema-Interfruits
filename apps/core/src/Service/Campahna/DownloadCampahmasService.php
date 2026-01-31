@@ -7,7 +7,6 @@ use App\shared\Service\Dto\FilterDto;
 use App\shared\Service\Filter\PaginationFilter;
 use App\shared\Service\Filter\SearchTextFilter;
 use App\shared\Service\FilterService;
-use App\shared\Service\Download\ExcelDownloadService;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class DownloadCampahmasService
@@ -15,7 +14,6 @@ final readonly class DownloadCampahmasService
     public function __construct(
         private CampahnaRepository $repository,
         private FilterService $filterService,
-        private ExcelDownloadService $excelDownloadService,
     ) {
     }
 
@@ -26,7 +24,6 @@ final readonly class DownloadCampahmasService
             'campahna.nombre',
             'campahna.descripcion',
             'fruta.nombre',
-            'periodo.nombre',
         ]));
 
         $data = $this->repository->downloadAndFilter($this->filterService);
@@ -35,7 +32,6 @@ final readonly class DownloadCampahmasService
             'nombre' => 'Nombre',
             'descripcion' => 'Descripción',
             'frutaNombre' => 'Fruta',
-            'periodoNombre' => 'Período',
             'isActive' => 'Activo',
             'createdAt' => 'Fecha de Creación',
         ];

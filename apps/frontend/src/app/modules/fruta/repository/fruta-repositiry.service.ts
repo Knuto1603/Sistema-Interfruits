@@ -6,7 +6,7 @@ import {Pagination} from "@shared/interface/pagination.interface";
 import {PAGINATION} from "@shared/app.constants";
 import {concatMap, map, Observable, of, tap} from "rxjs";
 import {FilterData} from "@shared/interface/filter-data.interface";
-import { Fruta, FrutasResponse } from "../interface/fruta.interface";
+import {Fruta, FrutaShared, FrutasResponse} from "../interface/fruta.interface";
 
 @Injectable({
   providedIn: 'root',
@@ -52,6 +52,14 @@ export class FrutaRepositoryService {
     return this.httpClient.get<{ item: Fruta }>(`${this.urlApi}/${id}`)
       .pipe(
         map(({ item }) => item)
+      );
+  }
+
+  public getShared(): Observable<FrutaShared[]> {
+    return this.httpClient
+      .get<{items: FrutaShared[]}>(`${this.urlApi}/shared`)
+      .pipe(
+        map(({ items }) => items)
       );
   }
 

@@ -4,36 +4,24 @@ namespace App\apps\core\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * Este Trait añade la relación con Campahna a las entidades de proceso.
+ * Permite el aislamiento automático de datos.
+ */
 trait ContextTrait
 {
-    #[ORM\ManyToOne(targetEntity: Periodo::class)]
-    #[ORM\JoinColumn(name: 'periodo_id', nullable: false)]
-    protected ?Periodo $periodo = null;
+    #[ORM\ManyToOne(targetEntity: Campahna::class)]
+    #[ORM\JoinColumn(name: 'campahna_id', referencedColumnName: 'id', nullable: false)]
+    protected ?Campahna $campahna = null;
 
-    #[ORM\ManyToOne(targetEntity: Fruta::class)]
-    #[ORM\JoinColumn(name: 'fruta_id', nullable: false)]
-    protected ?Fruta $fruta = null;
-
-    // Getters y setters
-    public function getPeriodo(): ?Periodo
+    public function getCampahna(): ?Campahna
     {
-        return $this->periodo;
+        return $this->campahna;
     }
 
-    public function setPeriodo(?Periodo $periodo): static
+    public function setCampahna(?Campahna $campahna): self
     {
-        $this->periodo = $periodo;
-        return $this;
-    }
-
-    public function getFruta(): ?Fruta
-    {
-        return $this->fruta;
-    }
-
-    public function setFruta(?Fruta $fruta): static
-    {
-        $this->fruta = $fruta;
+        $this->campahna = $campahna;
         return $this;
     }
 }

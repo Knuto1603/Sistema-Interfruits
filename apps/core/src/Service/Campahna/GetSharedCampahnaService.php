@@ -21,7 +21,7 @@ final readonly class GetSharedCampahnaService
             return [
                 'id' => UidType::toString($item['id']),
                 'nombre' => $item['nombre'],
-                'descripcion' => $item['descripcion'],
+                'fechaInicio' => $item['fechaInicio'],
             ];
         }, $items);
     }
